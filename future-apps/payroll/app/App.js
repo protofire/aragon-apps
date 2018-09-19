@@ -15,7 +15,7 @@ const AppContainer = styled(AragonApp)`
   justify-content: stretch;
 `
 
-const Header = styled.div`
+const Header = styled.header`
   flex-shrink: 0;
 `
 
