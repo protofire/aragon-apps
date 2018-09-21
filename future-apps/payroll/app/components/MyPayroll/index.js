@@ -1,6 +1,7 @@
 import React from 'react'
 
 import TwoColumn from '../Layout/TwoColumn'
+import SalaryAllocation from './SalaryAllocation'
 
 const MyPayroll = () => (
   <TwoColumn>
@@ -8,7 +9,7 @@ const MyPayroll = () => (
       My Payroll
     </TwoColumn.Left>
     <TwoColumn.Right>
-      Side content
+      <SalaryAllocation />
     </TwoColumn.Right>
   </TwoColumn>
 )
