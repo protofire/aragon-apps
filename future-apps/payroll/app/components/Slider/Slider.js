@@ -1,9 +1,13 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { theme } from '@aragon/ui'
 
-const RangeInput = styled.input.attrs({ type: 'range' })`
+const Slider = styled.input.attrs({
+  type: 'range',
+  min: 0,
+  max: 100,
+  step: 1
+})`
   width: 100%;
   min-height: 36px;
   margin: 0;
@@ -99,38 +103,5 @@ const RangeInput = styled.input.attrs({ type: 'range' })`
     display: none;
   }
 `
-
-class Slider extends React.Component {
-  constructor (props) {
-    super(props)
-    this.state = { progress: props.value || 0 }
-  }
-
-  componentDidUpdate () {
-    if (typeof this.props.onChange === 'function') {
-      this.props.onChange(this.state.progress)
-    }
-  }
-
-  handleChange = (event) => {
-    this.setState({ progress: event.target.value })
-  }
-
-  render () {
-    return (
-      <RangeInput
-        min={0}
-        max={100}
-        value={this.state.progress}
-        onChange={this.handleChange}
-      />
-    )
-  }
-}
-
-Slider.propTypes = {
-  value: PropTypes.number,
-  onChange: PropTypes.func,
-}
 
 export default Slider
