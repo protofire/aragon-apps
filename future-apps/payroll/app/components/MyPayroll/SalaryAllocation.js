@@ -37,7 +37,7 @@ class SalaryAllocation extends React.Component {
           Salary allocation
         </Text>
 
-        <PartitionBar partition={allocation}/>
+        <PartitionBar data={allocation}/>
 
         <EditButton onClick={this.startEditing}>
           Edit salary allocation

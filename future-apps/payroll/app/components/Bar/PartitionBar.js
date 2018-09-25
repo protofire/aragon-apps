@@ -57,43 +57,55 @@ const Legend = styled.ol`
   }
 `
 
-const PartitionBar = ({ partition, legend }) => partition && partition.length && (
-  <React.Fragment>
-    <Bar>
-      {partition.map((data, index) => (
-        <Partition
-          key={index}
-          title={`${data.token}: ${data.distribution}%`}
-          value={data.distribution}
-          color={DEFAULT_COLORS[partition.indexOf(data)]}
-        />
-      ))}
-    </Bar>
-    {legend && (
-      <Legend>
-        {partition.map((data, index) => (
-          <Label key={data.token + index}>
-            <Text color={theme.textSecondary}>
-              <Bullet color={DEFAULT_COLORS[partition.indexOf(data)]}/> {data.token}
-            </Text>
-            <Text weight='bolder'>
-              {data.distribution}%
-            </Text>
-          </Label>
-        ))}
-      </Legend>
-    )}
-  </React.Fragment>
-)
+const PartitionBar = ({ data, legend, colors = DEFAULT_COLORS }) => {
+  if (Array.isArray(data) && data.length) {
+    const partitions = data.sort(
+      (p1, p2) => p2.distribution - p1.distribution
+    )
+
+    return (
+      <React.Fragment>
+        <Bar>
+          {partitions.map(({ token, distribution }, index) => (
+            <Partition
+              key={index}
+              title={`${token}: ${distribution}%`}
+              value={distribution}
+              color={colors[index]}
+            />
+          ))}
+        </Bar>
+        {legend && (
+          <Legend>
+            {partitions.map(({ token, distribution }, index) => (
+              <Label key={token + index}>
+                <Text color={theme.textSecondary}>
+                  <Bullet color={colors[index]}/>
+                  {token}
+                </Text>
+                <Text weight='bolder'>
+                  {distribution}%
+                </Text>
+              </Label>
+            ))}
+          </Legend>
+        )}
+      </React.Fragment>
+    )
+  }
+
+  return null
+}
 
 PartitionBar.propTypes = {
-  legend: PropTypes.bool,
-  partition: PropTypes.arrayOf(
+  data: PropTypes.arrayOf(
     PropTypes.shape({
       token: PropTypes.string.isRequired,
       distribution: PropTypes.number.isRequired
     })
-  ).isRequired
+  ).isRequired,
+  colors: PropTypes.arrayOf(PropTypes.string),
+  legend: PropTypes.bool
 }
 
 PartitionBar.defaultProps = {
