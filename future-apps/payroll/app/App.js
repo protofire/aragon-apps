@@ -6,13 +6,24 @@ import AppLayout from './components/Layout/AppLayout'
 import MyPayroll from './components/MyPayroll'
 import TeamPayroll from './components/TeamPayroll'
 
+import { AddEmployee } from './components/panels'
+
 export default class App extends React.Component {
   state = {
+    activePanel: null,
     activeTab: 'my-payroll'
   }
 
   handleTabChange = (index, name) => {
     this.setState({ activeTab: name })
+  }
+
+  showAddEmployeePanel = () => {
+    this.setState({ activePanel: 'add-employee' })
+  }
+
+  hidePanel = () => {
+    this.setState({ activePanel: null })
   }
 
   renderActionButton () {
@@ -24,7 +35,7 @@ export default class App extends React.Component {
       )
     } else if (this.state.activeTab === 'team-payroll') {
       return (
-        <Button mode='strong'>
+        <Button mode='strong' onClick={this.showAddEmployeePanel}>
           Add new employee
         </Button>
       )
@@ -34,7 +45,7 @@ export default class App extends React.Component {
   }
 
   render () {
-    const { activeTab } = this.state
+    const { activePanel, activeTab } = this.state
 
     return (
       <AppLayout publicUrl='/assets/'>
@@ -60,6 +71,11 @@ export default class App extends React.Component {
             <TeamPayroll/>
           )}
         </AppLayout.Content>
+
+        <AddEmployee
+          opened={activePanel === 'add-employee'}
+          onClose={this.hidePanel}
+        />
       </AppLayout>
     )
   }
