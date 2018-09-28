@@ -1,4 +1,5 @@
 import JsonSchemaValidator from 'ajv'
+import utils from 'web3-utils'
 
 const validator = new JsonSchemaValidator({
   logger: console
@@ -6,10 +7,7 @@ const validator = new JsonSchemaValidator({
 
 validator.addFormat('address', {
   type: 'string',
-  validate: value => {
-    // TODO: web3.utils.isAddress(address)
-    return value
-  }
+  validate: utils.isAddress
 })
 
 export default validator
