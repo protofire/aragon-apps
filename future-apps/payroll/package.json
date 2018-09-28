@@ -45,6 +45,8 @@
     "@aragon/ppf-contracts": "^1.0.2",
     "@aragon/ui": "^0.19.0",
     "@babel/runtime": "^7.1.1",
+    "ajv": "^6.5.4",
+    "ajv-keywords": "^3.2.0",
     "prop-types": "^15.6.2",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
