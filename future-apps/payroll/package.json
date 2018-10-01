@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "start": "aragon run",
-    "test": "aragon contracts test",
+    "test": "aragon contracts test --network rpc",
     "test:gas": "GAS_REPORTER=true npm test",
     "compile": "aragon contracts compile",
     "coverage": "SOLIDITY_COVERAGE=true npm run test",
