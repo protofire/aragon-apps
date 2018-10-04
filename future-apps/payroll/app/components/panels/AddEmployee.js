@@ -79,11 +79,20 @@ class AddEmployee extends React.PureComponent {
     }
   }
 
-  handleEntityChange = (accountAddress, entity) => {
-    this.setState({ entity })
+  focusFirstEmptyField = () => {
+    const { entity, salary } = this.state
 
-    // Set focus on salary field
-    this.salaryInput.focus()
+    if (!entity) {
+      this.entitySearch.input.focus()
+    } else if (!salary) {
+      this.salaryInput.focus()
+    }
+  }
+
+  handleEntityChange = (accountAddress, entity) => {
+    this.setState({ entity }, () => {
+      this.focusFirstEmptyField()
+    })
   }
 
   handleFormSubmit = (event) => {
@@ -108,10 +117,7 @@ class AddEmployee extends React.PureComponent {
 
   handlePanelToggle = (opened) => {
     if (opened) { // When side panel is shown
-      // Set focus on entity field if no value provided
-      if (!this.state.entity) {
-        this.entitySearch.input.focus()
-      }
+      this.focusFirstEmptyField()
     }
   }
 
