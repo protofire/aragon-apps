@@ -1,26 +1,30 @@
 import React from 'react'
 import styled from 'styled-components'
-import { format as formatDate, startOfDay } from 'date-fns'
 
-import BaseInput from './BaseInput'
+import { TextInput } from '@aragon/ui'
 
-const Input = styled(BaseInput).attrs({ wide: true })``
+const Input = styled(TextInput).attrs({
+  wide: true
+})``
 
 // Text
-Input.Text = Input
+Input.Text = styled(Input).attrs({
+  type: 'text'
+})``
 
 // Numeric
 Input.Number = styled(Input).attrs({
-  type: 'number',
-  mapper: () => Number
+  type: 'number'
+})``
+
+Input.Currency = styled(Input.Number).attrs({
+  min: 0
 })``
 
 // Date
 Input.Date = styled(Input).attrs({
-  formatter: props => value => value != null
-    ? formatDate(value, props.format)
-    : '',
-  mapper: () => startOfDay,
+  // TODO: Aragon UI 'till doesn't support type="date"
+  // type: 'date'
 })``
 
 Input.Date.defaultProps = {

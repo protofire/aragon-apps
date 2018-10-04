@@ -1,9 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Button, Field, SidePanel } from '@aragon/ui'
+import { Button, Field, SidePanel, Text } from '@aragon/ui'
+import { format as formatDate } from 'date-fns'
 
 import Input from '../Input/Input'
+import EntitySelect from '../Input/EntitySelect'
 import validator from '../../data/validation'
 
 const Form = styled.form`
@@ -11,7 +13,7 @@ const Form = styled.form`
   grid-template-columns: 1fr 1fr;
   column-gap: 20px;
 
-  > :first-child, > :nth-child(n+6) {
+  > :first-child, > :nth-last-child(-n+2) {
     grid-column: span 2;
   }
 
@@ -20,125 +22,148 @@ const Form = styled.form`
   }
 `
 
-const employeeValidator = validator.compile({
-  type: 'object',
-  properties: {
-    salary: {
-      type: 'number',
-      exclusiveMinimum: 0
-    },
-    startDate: {
-      format: 'date'
-    },
-    name: {
-      type: 'string'
-    },
-    role: {
-      type: 'string'
-    },
-    accountAddress: {
-      type: 'string',
-      format: 'address'
-    }
-  },
-  required: ['salary', 'startDate', 'name', 'role', 'accountAddress']
-})
+const Static = styled(Text).attrs({
+  weight: 'bold'
+})`
+  line-height: 33px;
+  white-space: pre;
+`
 
 class AddEmployee extends React.PureComponent {
-  state = {
-    employee: {
-      startDate: new Date()
-    }
+  state = AddEmployee.initialState
+
+  static initialState = {
+    entity: null,
+    salary: null,
+    startDate: new Date()
   }
 
-  handleChange = (value, name) => {
-    if (name) {
-      this.setState(state => {
-        const employee = {
-          ...state.employee,
-          [name]: value
-        }
+  static validate = validator.compile({
+    type: 'object',
+    properties: {
+      salary: {
+        type: 'number',
+        exclusiveMinimum: 0
+      },
+      startDate: {
+        format: 'date',
+        default: new Date()
+      },
+      entity: {
+        properties: {
+          name: {
+            type: 'string'
+          },
+          role: {
+            type: 'string'
+          },
+          accountAddress: {
+            type: 'string',
+            format: 'address'
+          }
+        },
+        required: ['accountAddress']
+      }
+    },
+    required: ['salary', 'startDate', 'entity']
+  })
 
-        return { employee }
+  componentDidUpdate (prevProps, prevState) {
+    if (this.state !== prevState) {
+      const state = { ...this.state }
+
+      this.setState({
+        ...state,
+        isValid: AddEmployee.validate(state)
       })
     }
   }
 
-  validate = () => {
-    return employeeValidator(this.state.employee)
+  handleEntityChange = (accountAddress, entity) => {
+    this.setState({ entity })
+
+    // Set focus on salary field
+    this.salaryInput.focus()
+  }
+
+  handleFormSubmit = (event) => {
+    event.preventDefault()
+
+    // TODO: Call contract
+
+    // Reset form data
+    this.setState(AddEmployee.initialState)
+
+    // Close side panel
+    this.props.onClose()
+  }
+
+  handleSalaryChange = (event) => {
+    this.setState({ salary: event.target.value })
+  }
+
+  handleStartDateChange = (event) => {
+    this.setState({ startDate: new Date(event.target.value) })
+  }
+
+  handlePanelToggle = (opened) => {
+    if (opened) { // When side panel is shown
+      // Set focus on entity field if no value provided
+      if (!this.state.entity) {
+        this.entitySearch.input.focus()
+      }
+    }
   }
 
   render () {
-    const { employee } = this.state
-    const isValid = this.validate()
+    const { entity, salary, startDate, isValid } = this.state
 
     return (
       <SidePanel
         title='Add new employee'
         opened={this.props.opened}
         onClose={this.props.onClose}
+        onTransitionEnd={this.handlePanelToggle}
       >
-        <Form>
+        <Form onSubmit={this.handleFormSubmit}>
           <Field label='Entity'>
-            <Input.Text
-              name='entity'
-              value={employee.entity}
-              readOnly={true}
+            <EntitySelect
+              ref={el => this.entitySearch = el}
+              key={entity && entity.domain}
+              value={entity && entity.domain}
+              onChange={this.handleEntityChange}
             />
           </Field>
 
           <Field label='Salary'>
-            <Input.Number
-              name='salary'
-              value={employee.salary}
-              onChange={this.handleChange}
-              required={true}
-              autoFocus={true}
+            <Input.Currency
+              innerRef={el => this.salaryInput = el}
+              value={salary || ''}
+              onChange={this.handleSalaryChange}
             />
           </Field>
 
           <Field label='Start Date'>
             <Input.Date
-              name='startDate'
-              value={employee.startDate}
-              onChange={this.handleChange}
-              required={true}
-              readOnly={true}
+              value={startDate ? formatDate(startDate, 'MM/dd/YYYY') : ''}
+              onChange={this.handleStartDateChange}
+              readOnly={true} // TODO: implement date picker
             />
           </Field>
 
           <Field label='Name'>
-            <Input.Text
-              name='name'
-              value={employee.name}
-              onChange={this.handleChange}
-              required={true}
-            />
+            <Static>{entity && entity.name || ' '}</Static>
           </Field>
 
           <Field label='Role'>
-            <Input.Text
-              name='role'
-              value={employee.role}
-              onChange={this.handleChange}
-              required={true}
-            />
+            <Static>{entity && entity.role || ' '}</Static>
           </Field>
 
           <Field label='Account Address'>
-            <Input.Text
-              name='accountAddress'
-              value={employee.accountAddress}
-              onChange={this.handleChange}
-              required={true}
-            />
+            <Static>{entity && entity.accountAddress || ' '}</Static>
           </Field>
 
-          <Button
-            mode="strong"
-            disabled={!isValid}
-            onClick={this.props.onClose}
-          >
+          <Button type='submit' mode='strong' disabled={!isValid}>
             Add new employee
           </Button>
         </Form>

@@ -2,7 +2,8 @@ import JsonSchemaValidator from 'ajv'
 import utils from 'web3-utils'
 
 const validator = new JsonSchemaValidator({
-  logger: console
+  coerceTypes: true,
+  useDefaults: true
 })
 
 validator.addFormat('address', {
