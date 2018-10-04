@@ -1,11 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Button, Field, SidePanel, Text } from '@aragon/ui'
+import { Button, Field, SidePanel } from '@aragon/ui'
 import { format as formatDate } from 'date-fns'
 
-import Input from '../Input/Input'
-import EntitySelect from '../Input/EntitySelect'
+import Input from '../Input'
 import validator from '../../data/validation'
 
 const Form = styled.form`
@@ -20,13 +19,6 @@ const Form = styled.form`
   > :last-child {
     margin-top: 20px;
   }
-`
-
-const Static = styled(Text).attrs({
-  weight: 'bold'
-})`
-  line-height: 33px;
-  white-space: pre;
 `
 
 class AddEmployee extends React.PureComponent {
@@ -133,7 +125,7 @@ class AddEmployee extends React.PureComponent {
       >
         <Form onSubmit={this.handleFormSubmit}>
           <Field label='Entity'>
-            <EntitySelect
+            <Input.Entity
               ref={el => this.entitySearch = el}
               key={entity && entity.domain}
               value={entity && entity.domain}
@@ -158,15 +150,21 @@ class AddEmployee extends React.PureComponent {
           </Field>
 
           <Field label='Name'>
-            <Static>{entity && entity.name || ' '}</Static>
+            <Input.Static>
+              {entity && entity.name || ' '}
+            </Input.Static>
           </Field>
 
           <Field label='Role'>
-            <Static>{entity && entity.role || ' '}</Static>
+            <Input.Static>
+              {entity && entity.role || ' '}
+            </Input.Static>
           </Field>
 
           <Field label='Account Address'>
-            <Static>{entity && entity.accountAddress || ' '}</Static>
+            <Input.Static>
+              {entity && entity.accountAddress || ' '}
+            </Input.Static>
           </Field>
 
           <Button type='submit' mode='strong' disabled={!isValid}>

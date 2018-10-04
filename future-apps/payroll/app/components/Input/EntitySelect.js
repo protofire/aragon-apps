@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { Text, theme } from '@aragon/ui'
 import Autocomplete from 'react-autocomplete'
 
-import Input from './Input'
+import BaseInput from './BaseInput'
 import * as idm from '../../services/idm'
 
 const EntityList = styled.ul`
@@ -43,7 +43,7 @@ class EntitySelect extends React.Component {
         })
       } else if (typeof this.props.onChange === 'function') {
         this.setState({ matches: [] })
-        this.props.onChange({})
+        this.props.onChange()
       }
     }
   }
@@ -59,11 +59,7 @@ class EntitySelect extends React.Component {
   }
 
   renderInput = ({ ref, ...props }) => (
-    <Input.Text
-      type='search'
-      innerRef={ref}
-      {...props}
-    />
+    <BaseInput type='search' innerRef={ref} {...props}/>
   )
 
   renderMenu = (entities) => (
