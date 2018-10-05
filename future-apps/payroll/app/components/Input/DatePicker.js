@@ -21,7 +21,6 @@ const mainColor = '#30D9D4'
 
 const Container = styled.div`
   display: grid;
-  row-gap: 0.25em;
   min-width: 15em;
   margin: 0 auto;
   padding-top: 0.5em;
@@ -29,6 +28,15 @@ const Container = styled.div`
   border: 1px solid ${theme.contentBorder};
   border-radius: 3px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+  
+  ${props => props.overlay && css`
+    &&& {
+      position: absolute;
+      right: 0;
+      z-index: 10;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    }
+  `}
 `
 
 const Selector = styled.div`
@@ -52,8 +60,8 @@ const MonthView = styled.ol`
   margin: 0;
   padding: 0.5em;
   display: grid;
+  grid-gap: 0.25em;
   grid-template: auto / repeat(7, 1fr);
-  grid-gap: 0.5em;
   list-style: none;
 `
 
@@ -105,7 +113,7 @@ const WeekDay = styled(DayView)`
 
 class DatePicker extends React.PureComponent {
   state = {
-    value: this.props.currentDate || new Date(),
+    value: this.props.currentDate || new Date()
   }
 
   handleSelection = (date) => (event) => {
@@ -150,12 +158,10 @@ class DatePicker extends React.PureComponent {
 
   render () {
     const today = startOfDay(new Date())
-    const selected = this.state.value || today
-    const firstDayMonth = startOfMonth(selected)
-    const lastDayMonth = endOfMonth(selected)
+    const { value: selected = today } = this.state
 
     return (
-      <Container>
+      <Container overlay={this.props.overlay}>
         {!this.props.hideYearSelector && (
           <Selector>
             <ArrowButton onClick={this.previousYear}>
@@ -200,8 +206,8 @@ class DatePicker extends React.PureComponent {
           ))}
 
           {eachDayOfInterval({
-            start: startOfWeek(firstDayMonth),
-            end: endOfWeek(lastDayMonth)
+            start: startOfWeek(startOfMonth(selected)),
+            end: endOfWeek(endOfMonth(selected))
           }).map(day => (
             <DayView
               key={day.getTime()}
@@ -231,6 +237,7 @@ DatePicker.propTypes = {
   hideMonthSelector: PropTypes.bool,
   hideWeekDays: PropTypes.bool,
   hideYearSelector: PropTypes.bool,
+  overlay: PropTypes.bool,
 
   // Formatting
   dayFormat: PropTypes.string,
@@ -241,11 +248,12 @@ DatePicker.propTypes = {
 }
 
 DatePicker.defaultProps = {
+  onSelect: () => {},
   dayFormat: 'd',
   monthFormat: 'MMMM',
   monthYearFormat: 'MMMM YYYY',
   weekDayFormat: 'eee',
-  yearFormat: 'YYYY',
+  yearFormat: 'YYYY'
 }
 
 export default DatePicker
