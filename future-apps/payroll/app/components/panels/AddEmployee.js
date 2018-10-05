@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Button, Field, SidePanel } from '@aragon/ui'
-import { format as formatDate } from 'date-fns'
+import { startOfDay } from 'date-fns'
 
 import Input from '../Input'
 import validator from '../../data/validation'
@@ -27,7 +27,7 @@ class AddEmployee extends React.PureComponent {
   static initialState = {
     entity: null,
     salary: null,
-    startDate: new Date()
+    startDate: startOfDay(new Date())
   }
 
   static validate = validator.compile({
@@ -39,7 +39,7 @@ class AddEmployee extends React.PureComponent {
       },
       startDate: {
         format: 'date',
-        default: new Date()
+        default: startOfDay(new Date())
       },
       entity: {
         properties: {
@@ -103,8 +103,8 @@ class AddEmployee extends React.PureComponent {
     this.setState({ salary: event.target.value })
   }
 
-  handleStartDateChange = (event) => {
-    this.setState({ startDate: new Date(event.target.value) })
+  handleStartDateChange = (date) => {
+    this.setState({ startDate: date })
   }
 
   handlePanelToggle = (opened) => {
@@ -143,9 +143,9 @@ class AddEmployee extends React.PureComponent {
 
           <Field label='Start Date'>
             <Input.Date
-              value={startDate ? formatDate(startDate, 'MM/dd/YYYY') : ''}
+              key={startDate}
+              value={startDate}
               onChange={this.handleStartDateChange}
-              readOnly={true} // TODO: implement date picker
             />
           </Field>
 
