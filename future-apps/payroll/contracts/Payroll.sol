@@ -86,28 +86,28 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
         _;
     }
 
-    /**
-     * @notice Initialize Payroll app for `_finance`. Set ETH and Denomination tokens
-     * @param _finance Address of the finance Payroll will rely on (non changeable)
-     * @param _denominationToken Address of Denomination Token
-     */
+    // /**
+    //  * @notice Initialize Payroll app for `_finance`. Set ETH and Denomination tokens
+    //  * @param _finance Address of the finance Payroll will rely on (non changeable)
+    //  * @param _denominationToken Address of Denomination Token
+    //  */
     function initialize(
-        Finance _finance,
-        address _denominationToken,
-        IFeed _priceFeed,
-        uint64 _rateExpiryTime
+        // Finance _finance,
+        // address _denominationToken,
+        // IFeed _priceFeed,
+        // uint64 _rateExpiryTime
     ) external
         onlyInit
     {
-        require(address(_finance) != address(0));
+        // require(address(_finance) != address(0));
 
         initialized();
 
         nextEmployee = 1; // leave 0 to check null address mapping
-        finance = _finance;
-        denominationToken = _denominationToken;
-        _setPriceFeed(_priceFeed);
-        _setRateExpiryTime(_rateExpiryTime);
+        // finance = _finance;
+        // denominationToken = _denominationToken;
+        // _setPriceFeed(_priceFeed);
+        // _setRateExpiryTime(_rateExpiryTime);
     }
 
     /**
