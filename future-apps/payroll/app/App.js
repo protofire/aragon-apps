@@ -48,7 +48,7 @@ export default class App extends React.Component {
     const { activePanel, activeTab } = this.state
 
     return (
-      <AppLayout publicUrl='/assets/'>
+      <AppLayout>
         <AppLayout.Header>
           <AppBar
             title='Payroll'

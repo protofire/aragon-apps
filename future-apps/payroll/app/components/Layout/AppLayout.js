@@ -1,7 +1,9 @@
 import styled, { css } from 'styled-components'
 import { AragonApp } from '@aragon/ui'
 
-const AppLayout = styled(AragonApp)`
+const AppLayout = styled(AragonApp).attrs({
+  publicUrl: './aragon-ui/'
+})`
   display: flex;
   width: 100vw;
   height: 100vh;
