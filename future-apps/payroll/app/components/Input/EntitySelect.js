@@ -13,6 +13,7 @@ const EntityList = styled.ul`
   list-style: none;
   border: 1px solid ${theme.contentBorder};
   background: ${theme.contentBackground};
+  z-index: 10;
 `
 
 const EntityItem = styled.li`
