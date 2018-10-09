@@ -1,11 +1,11 @@
 import React from 'react'
 
-import TwoColumn from '../Layout/TwoColumn'
+import TwoColumn from '../components/Layout/TwoColumn'
 
-const TeamPayroll = () => (
+const MyPayroll = () => (
   <TwoColumn>
     <TwoColumn.Left>
-      Team Payroll
+      My Payroll
     </TwoColumn.Left>
     <TwoColumn.Right>
       Side content
@@ -13,4 +13,4 @@ const TeamPayroll = () => (
   </TwoColumn>
 )
 
-export default TeamPayroll
+export default MyPayroll
