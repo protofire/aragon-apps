@@ -65,16 +65,16 @@ export default class App extends React.Component {
       <AragonApp publicUrl='./aragon-ui/'>
         <AppView appBar={header}>
           {this.state.activeTab === 'my-payroll' && (
-            <MyPayroll app={this.props.app}/>
+            <MyPayroll {...this.props}/>
           )}
 
           {this.state.activeTab === 'team-payroll' && (
-            <TeamPayroll/>
+            <TeamPayroll {...this.props}/>
           )}
         </AppView>
 
         <AddEmployee
-          app={this.props.app}
+          {...this.props}
           opened={this.state.showAddEmployeePanel}
           onClose={this.hidePanels}
         />
