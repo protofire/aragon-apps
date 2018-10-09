@@ -4,8 +4,10 @@ import styled from 'styled-components'
 import { Button, Field, SidePanel } from '@aragon/ui'
 import { startOfDay } from 'date-fns'
 
-import Input from '../Input'
-import validator from '../../data/validation'
+import Input from '../components/Input'
+import validator from '../data/validation'
+
+const SECONDS_IN_A_YEAR = 31557600 // 365.25 days
 
 const Form = styled.form`
   display: grid;
@@ -90,13 +92,32 @@ class AddEmployee extends React.PureComponent {
   handleFormSubmit = (event) => {
     event.preventDefault()
 
-    // TODO: Call contract
+    const { app } = this.props
 
-    // Reset form data
-    this.setState(AddEmployee.initialState)
+    if (app) {
+      const accountAddress = this.state.entity.accountAddress
+      const initialDenominationSalary = this.state.salary / SECONDS_IN_A_YEAR
+      const name = this.state.entity.domain
+      const startDate = Math.floor(this.state.startDate.getTime() / 1000)
 
-    // Close side panel
-    this.props.onClose()
+      app.addEmployeeWithNameAndStartDate(
+        accountAddress,
+        initialDenominationSalary,
+        name,
+        startDate
+      ).subscribe(employee => {
+          if (employee) {
+            console.info(employee)
+
+            // Reset form data
+            this.setState(AddEmployee.initialState)
+
+            // Close side panel
+            this.props.onClose()
+          }
+        }
+      )
+    }
   }
 
   handleSalaryChange = (event) => {
@@ -177,6 +198,7 @@ class AddEmployee extends React.PureComponent {
 }
 
 AddEmployee.propsType = {
+  app: PropTypes.any.isRequired,
   onClose: PropTypes.func,
   opened: PropTypes.bool
 }
