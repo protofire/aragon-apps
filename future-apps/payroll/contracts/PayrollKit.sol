@@ -11,10 +11,17 @@ import "@aragon/os/contracts/factory/DAOFactory.sol";
 import "@aragon/os/contracts/kernel/Kernel.sol";
 import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
+import "@aragon/ppf-contracts/contracts/IFeed.sol";
 
 import "./Payroll.sol";
-import "./PPFMock.sol";
 
+
+contract PPFMock is IFeed {
+  function get(address base, address quote) external view returns (uint128 xrt, uint64 when) {
+      xrt = 1;
+      when = uint64(now);
+  }
+}
 
 contract KitBase is APMNamehash, EVMScriptRegistryConstants {
     ENS public ens;
@@ -106,9 +113,9 @@ contract PayrollKit is KitBase {
       setVaultPermissions(acl, vault, finance, root);
 
       // EVMScriptRegistry permissions
-      EVMScriptRegistry reg = EVMScriptRegistry(dao.getApp(dao.APP_ADDR_NAMESPACE(), EVMSCRIPT_REGISTRY_APP_ID));
-      acl.createBurnedPermission(reg, reg.REGISTRY_ADD_EXECUTOR_ROLE());
-      acl.createBurnedPermission(reg, reg.REGISTRY_MANAGER_ROLE());
+      // EVMScriptRegistry reg = EVMScriptRegistry(dao.getApp(dao.APP_ADDR_NAMESPACE(), EVMSCRIPT_REGISTRY_APP_ID));
+      // acl.createBurnedPermission(reg, reg.REGISTRY_ADD_EXECUTOR_ROLE());
+      // acl.createBurnedPermission(reg, reg.REGISTRY_MANAGER_ROLE());
 
       cleanupDAOPermissions(dao, acl, root);
 
