@@ -2,7 +2,7 @@
   "name": "@aragon/future-apps-payroll",
   "version": "0.1.0",
   "scripts": {
-    "start": "aragon run --network rpc",
+    "start": "aragon run --network rpc --kit PayrollKit --kit-init @ARAGON_ENS",
     "dev": "aragon run --network rpc --http localhost:8001 --http-served-from ./dist",
     "dev:reset": "npm run dev -- --reset",
     "test": "TRUFFLE_TEST=true npm run ganache-cli:test",
