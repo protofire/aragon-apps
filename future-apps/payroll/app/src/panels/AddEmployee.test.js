@@ -1,35 +1,58 @@
 /* eslint-env jest */
 
 import React from 'react'
-import { fireEvent, render, waitForElement } from 'react-testing-library'
+import { cleanup, fireEvent, render, waitForElement } from 'react-testing-library'
 import 'jest-dom/extend-expect'
 import { format as formatDate } from 'date-fns'
 
 import AddEmployeePanel from './AddEmployee'
 
-describe('AddEmployee', () => {
-  xdescribe('Fields', () => {
-    describe('Entity field', () => {
-      const panel = render(<AddEmployeePanel />)
-      const field = panel.queryByLabelText('Entity')
+afterEach(cleanup)
 
+describe('Add new employee panel', () => {
+  it('can be closed with the "x" button', () => {
+    const onClose = jest.fn()
+    const { buttons } = renderAddEmployeePanel({ onClose })
+
+    expect(buttons.close).not.toBeNull()
+    expect(buttons.close).toBeVisible()
+
+    fireEvent.click(buttons.close)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('can be closed pressing ESC', () => {
+    const onClose = jest.fn()
+    const { form } = renderAddEmployeePanel({ onClose })
+
+    fireEvent.keyDown(form, { key: 'Escape', keyCode: 27, which: 27 })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  describe('Fields', () => {
+    describe('Entity field', () => {
       it('renders a search input', () => {
-        expect(field).not.toBeNull()
-        expect(field).toBeVisible()
-        expect(field.type).toBe('search')
+        const { fields } = renderAddEmployeePanel()
+
+        expect(fields.entity).not.toBeNull()
+        expect(fields.entity).toBeVisible()
+        expect(fields.entity.type).toBe('search')
       })
 
       it('allows to search for an entity', async () => {
+        const { form, fields } = renderAddEmployeePanel()
         const searchText = 'protofire'
 
-        expect(field.value).toBe('')
+        expect(fields.entity.value).toBe('')
 
         // Enter search text into the field
-        fireEvent.change(field, { target: { value: searchText } })
+        fireEvent.change(fields.entity, { target: { value: searchText } })
 
         // Wait until the suggestions appear
         const suggestion = await waitForElement(() =>
-          panel.container.querySelector('ul > li:first-child')
+          form.querySelector('ul > li:first-child')
         )
 
         expect(suggestion).not.toBeNull()
@@ -39,104 +62,136 @@ describe('AddEmployee', () => {
         fireEvent.click(suggestion)
 
         // Verify that the data for the selected entity is shown
-        const name = panel.queryByTestId('entity-name')
-        const role = panel.queryByTestId('entity-role')
-        const accountAddress = panel.queryByTestId('entity-account-address')
-
-        expect(name).toHaveTextContent('ProtoFire')
-        expect(role).toHaveTextContent('Organization')
-        expect(accountAddress).toHaveTextContent('xb4124cEB3451635DAcedd11767f004d8a28c6eE7')
+        expect(fields.name).toHaveTextContent('ProtoFire')
+        expect(fields.role).toHaveTextContent('Organization')
+        expect(fields.accountAddress).toHaveTextContent('xb4124cEB3451635DAcedd11767f004d8a28c6eE7')
       })
     })
 
     describe('Salary field', () => {
-      const panel = render(<AddEmployeePanel />)
-      const field = panel.queryByLabelText('Salary')
-
       it('renders a numeric input', () => {
-        expect(field).not.toBeNull()
-        expect(field).toBeVisible()
-        expect(field.type).toBe('number')
+        const { fields } = renderAddEmployeePanel()
+
+        expect(fields.salary).not.toBeNull()
+        expect(fields.salary).toBeVisible()
+        expect(fields.salary.type).toBe('number')
       })
     })
 
     describe('Start Date field', () => {
-      const panel = render(<AddEmployeePanel />)
-      const field = panel.queryByLabelText('Start Date')
-
       it('renders an input', () => {
-        expect(field).not.toBeNull()
-        expect(field).toBeVisible()
+        const { fields } = renderAddEmployeePanel()
+
+        expect(fields.startDate).not.toBeNull()
+        expect(fields.startDate).toBeVisible()
       })
 
       it('is today by default', () => {
+        const { fields } = renderAddEmployeePanel()
         const today = new Date()
 
-        expect(field.value).toBe(formatDate(today, 'LL/dd/yyyy'))
+        expect(fields.startDate.value).toBe(formatDate(today, 'LL/dd/yyyy'))
       })
     })
   })
 
-  describe('Form validation', () => {
-    let form, entityField, salaryField
+  describe('Validations', () => {
+    it('entity field is required', async () => {
+      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
 
-    beforeEach(async () => {
-      const panel = render(<AddEmployeePanel />)
-
-      form = panel.getByTestId('add-employee-form')
-      entityField = panel.queryByLabelText('Entity')
-      salaryField = panel.queryByLabelText('Salary')
-    })
-
-    xit('entity field is required', async () => {
-      const submitButton = await waitForElement(() =>
-        form.querySelector('button[type="submit"]')
-      )
-
-      expect(submitButton).toHaveAttribute('disabled')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Fill in Salary field with a valid value
-      fireEvent.change(salaryField, { target: { value: '40000' } })
-      expect(submitButton).toHaveAttribute('disabled')
+      fireEvent.change(fields.salary, {
+        target: { value: '40000' }
+      })
 
-      // Try with empty value
-      expect(entityField.value).toBe('')
-      expect(submitButton).toHaveAttribute('disabled')
+      // Empty value for entity field
+      expect(fields.entity.value).toBe('')
+      expect(buttons.submit).toHaveAttribute('disabled')
+
+      // Valid value for entity field
+      const suggestion = await searchEntity('protofire.aragonid.eth')
+      fireEvent.click(suggestion)
+
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('allows only positive salaries', async () => {
-      const submitButton = await waitForElement(() =>
-        form.querySelector('button[type="submit"]')
-      )
+      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
 
-      expect(submitButton).toHaveAttribute('disabled')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Fill in Entity field with a valid value
-      fireEvent.change(entityField, { target: { value: 'aragonid.eth' } })
+      const suggestion = await searchEntity('protofire.aragonid.eth')
+      fireEvent.click(suggestion)
 
-      fireEvent.click(
-        await waitForElement(() =>
-          form.querySelector('ul > li:first-child')
-        )
-      )
-
-      expect(submitButton).toHaveAttribute('disabled')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with empty salary
-      fireEvent.change(salaryField, { target: { value: '' } })
-      expect(submitButton).toHaveAttribute('disabled')
+      fireEvent.change(fields.salary, {
+        target: { value: '' }
+      })
+
+      expect(fields.accountAddress).toHaveTextContent('xb4124cEB3451635DAcedd11767f004d8a28c6eE7')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with negative salary
-      fireEvent.change(salaryField, { target: { value: '-40000' } })
-      expect(submitButton).toHaveAttribute('disabled')
+      fireEvent.change(fields.salary, {
+        target: { value: '-40000' }
+      })
+
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with salary equal to 0
-      fireEvent.change(salaryField, { target: { value: '0' } })
-      expect(submitButton).toHaveAttribute('disabled')
+      fireEvent.change(fields.salary, {
+        target: { value: '0' }
+      })
+
+      expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with positive salary
-      fireEvent.change(salaryField, { target: { value: '40000' } })
-      expect(submitButton).not.toHaveAttribute('disabled')
+      fireEvent.change(fields.salary, {
+        target: { value: '40000' }
+      })
+
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
   })
 })
+
+function renderAddEmployeePanel (props) {
+  const panel = render(
+    <AddEmployeePanel opened={true} {...props} />
+  )
+
+  const form = panel.getByTestId('add-employee-form')
+
+  const fields = {
+    entity: panel.queryByLabelText('Entity'),
+    salary: panel.queryByLabelText('Salary'),
+    startDate: panel.queryByLabelText('Start Date'),
+
+    // Static
+    name: panel.queryByTestId('entity-name'),
+    role: panel.queryByTestId('entity-role'),
+    accountAddress: panel.queryByTestId('entity-account-address')
+  }
+
+  const buttons = {
+    close: panel.container.querySelector('button'),
+    submit: panel.container.querySelector('button[type="submit"]'),
+  }
+
+  const searchEntity = (searchText) => {
+    fireEvent.change(fields.entity, {
+      target: { value: searchText }
+    })
+
+    return waitForElement(() =>
+      form.querySelector('ul > li:first-child')
+    )
+  }
+
+  return { form, fields, buttons, searchEntity }
+}
