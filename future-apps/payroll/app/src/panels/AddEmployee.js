@@ -44,6 +44,7 @@ class AddEmployee extends React.PureComponent {
         default: startOfDay(new Date())
       },
       entity: {
+        type: 'object',
         properties: {
           name: {
             type: 'string'
