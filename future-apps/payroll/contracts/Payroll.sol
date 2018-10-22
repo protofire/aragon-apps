@@ -41,6 +41,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
         uint256 denominationTokenSalary; // per second in denomination Token
         uint256 accruedValue;
         uint64 lastPayroll;
+        uint64 startDate;
         uint64 endDate;
         bool terminated;
         string name;
@@ -404,6 +405,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
             uint256 accruedValue,
             string name,
             uint64 lastPayroll,
+            uint64 startDate,
             uint64 endDate,
             bool terminated
         )
@@ -416,6 +418,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
         accruedValue = employee.accruedValue;
         name = employee.name;
         lastPayroll = employee.lastPayroll;
+        startDate = employee.startDate;
         endDate = employee.endDate;
         terminated = employee.terminated;
     }
@@ -441,6 +444,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
             uint256 accruedValue,
             string name,
             uint64 lastPayroll,
+            uint64 startDate,
             uint64 endDate,
             bool terminated
         )
@@ -452,6 +456,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
         accruedValue = employee.accruedValue;
         name = employee.name;
         lastPayroll = employee.lastPayroll;
+        startDate = employee.startDate;
         endDate = employee.endDate;
         terminated = employee.terminated;
     }
@@ -514,6 +519,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
             denominationTokenSalary: initialDenominationSalary,
             accruedValue: 0,
             lastPayroll: startDate,
+            startDate: startDate,
             endDate: MAX_UINT64,
             terminated: false,
             name: name
