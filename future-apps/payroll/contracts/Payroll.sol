@@ -393,6 +393,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
      * @return Employee's accrued value
      * @return Employee's name
      * @return Employee's last payment received date
+     * @return Employee's start date
      * @return Employee's termination date (max uint64 if none)
      * @return Bool indicating if employee is terminated
      */
@@ -432,6 +433,7 @@ contract Payroll is AragonApp { //, IForwarder { // makes coverage crash (remove
      * @return Employee's accrued value
      * @return Employee's name
      * @return Employee's last payment received date
+     * @return Employee's start date
      * @return Employee's termination date (max uint64 if none)
      * @return Bool indicating if employee is terminated
      */
