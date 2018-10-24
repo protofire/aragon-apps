@@ -12,6 +12,7 @@ import "@aragon/os/contracts/kernel/Kernel.sol";
 import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/ppf-contracts/contracts/IFeed.sol";
+import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 
 import "./Payroll.sol";
 
@@ -69,6 +70,8 @@ contract PayrollKit is KitBase {
 
     uint64 financePeriodDuration = 31557600;
     uint64 rateExpiryTime = 1000;
+    uint64 amount = uint64(-1);
+    address constant ANY_ENTITY = address(-1);
 
     constructor(ENS ens) KitBase(DAOFactory(0), ens) public {
         tokenFactory = new MiniMeTokenFactory();
@@ -87,15 +90,32 @@ contract PayrollKit is KitBase {
       PPFMock priceFeed = new PPFMock();
 
       MiniMeToken denominationToken = tokenFactory.createCloneToken(MiniMeToken(0), 0, "USD Dolar", 18, "USD", true);
+      MiniMeToken token = tokenFactory.createCloneToken(MiniMeToken(address(0)), 0, "DevToken", 18, "XDT", true);
 
       acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
       Vault vault;
       Finance finance;
-      (vault, finance, payroll) = deployApps(dao);
+      TokenManager tokenManager;
+      (vault, finance, payroll, tokenManager) = deployApps(dao);
 
+      // token manager initialization
+      token.changeController(tokenManager); // token manager has to create tokens
+
+      // permissions
+      setVaultPermissions(acl, vault, finance, root);
+
+      vault.initialize();
       finance.initialize(vault, financePeriodDuration);
       payroll.initialize(finance, denominationToken, priceFeed, rateExpiryTime);
+      tokenManager.initialize(token, true, 0);
+      //
+      // acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
+      //
+      // tokenManager.mint(this, amount);
+      // token.approve(finance, amount);
+      // finance.deposit(token, amount, "Initial deployment");
+
 
       // Payroll permissions
       acl.createPermission(employer, payroll, payroll.ADD_EMPLOYEE_ROLE(), root);
@@ -109,8 +129,7 @@ contract PayrollKit is KitBase {
       // Finance permissions
       acl.createPermission(payroll, finance, finance.CREATE_PAYMENTS_ROLE(), root);
 
-      // Vault permissions
-      setVaultPermissions(acl, vault, finance, root);
+      // setTokenManagerPermissions(acl, tokenManager, root);
 
       // EVMScriptRegistry permissions
       // EVMScriptRegistry reg = EVMScriptRegistry(dao.getApp(dao.APP_ADDR_NAMESPACE(), EVMSCRIPT_REGISTRY_APP_ID));
@@ -122,20 +141,23 @@ contract PayrollKit is KitBase {
       emit DeployInstance(dao);
     }
 
-    function deployApps(Kernel dao) internal returns (Vault, Finance, Payroll) {
+    function deployApps(Kernel dao) internal returns (Vault, Finance, Payroll, TokenManager) {
       bytes32 vaultAppId = apmNamehash("vault");
       bytes32 financeAppId = apmNamehash("finance");
       bytes32 payrollAppId = apmNamehash("payroll");
+      bytes32 tokenManagerAppId = apmNamehash("token-manager");
 
       Vault vault = Vault(dao.newAppInstance(vaultAppId, latestVersionAppBase(vaultAppId)));
       Finance finance = Finance(dao.newAppInstance(financeAppId, latestVersionAppBase(financeAppId)));
       Payroll payroll = Payroll(dao.newAppInstance(payrollAppId, latestVersionAppBase(payrollAppId)));
+      TokenManager tokenManager = TokenManager(dao.newAppInstance(tokenManagerAppId, latestVersionAppBase(tokenManagerAppId)));
 
       emit InstalledApp(vault, vaultAppId);
       emit InstalledApp(finance, financeAppId);
       emit InstalledApp(payroll, payrollAppId);
+      emit InstalledApp(tokenManager, tokenManagerAppId);
 
-      return (vault, finance, payroll);
+      return (vault, finance, payroll, tokenManager);
     }
 
     function setVaultPermissions(ACL acl, Vault vault, Finance finance, address root) internal {
@@ -143,5 +165,35 @@ contract PayrollKit is KitBase {
       acl.createPermission(finance, vault, vaultTransferRole, this); // manager is this to allow 2 grants
       acl.grantPermission(root, vault, vaultTransferRole);
       acl.setPermissionManager(root, vault, vaultTransferRole); // set root as the final manager for the role
+    }
+
+    function setTokenManagerPermissions(ACL acl, TokenManager tokenManager, address root) internal {
+        // token manager permissions
+        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.MINT_ROLE(), root);
+        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.ISSUE_ROLE(), root);
+        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.ASSIGN_ROLE(), root);
+        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.REVOKE_VESTINGS_ROLE(), root);
+    }
+
+    function deployTokens(Finance finance) internal {
+      MiniMeToken token1 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 1", 18, "TK1", true);
+      // MiniMeToken token2 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 2", 18, "TK2", true);
+      // MiniMeToken token3 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 3", 18, "TK3", true);
+
+      token1.generateTokens(this, amount);
+      // token2.generateTokens(this, amount);
+      // token3.generateTokens(this, amount);
+
+      token1.approve(finance, amount);
+      // token2.approve(finance, amount);
+      // token3.approve(finance, amount);
+
+      finance.deposit(token1, amount, "Initial deployment");
+      // finance.deposit(token2, amount, "Initial deployment");
+      // finance.deposit(token3, amount, "Initial deployment");
+    }
+
+    function onApprove(address, address, uint) public returns (bool) {
+        return true;
     }
 }

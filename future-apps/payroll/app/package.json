@@ -5,8 +5,8 @@
   "author": "Sebastián Galiano <sebastian.galiano@altoros.com>",
   "scripts": {
     "build": "npm run sync-assets && npm run build:app && npm run build:script",
-    "build:app": "parcel build src/index.html --public-url '.' --no-cache",
-    "build:script": "parcel build src/script.js --no-cache",
+    "build:app": "parcel build src/index.html --public-url '.'",
+    "build:script": "parcel build src/script.js",
     "lint": "standard src/**/*.js",
     "start": "npm run sync-assets && npm run build:script -- --no-minify && parcel serve src/index.html --port 8001 --open",
     "sync-assets": "copy-aragon-ui-assets -n aragon-ui ./dist",
