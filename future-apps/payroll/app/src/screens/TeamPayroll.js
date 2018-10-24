@@ -1,8 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
+import EmployeeTable from './components/EmployeeTable/EmployeeTable'
 import Section from '../components/Layout/Section'
-import EmployeeTable from './components/EmployeeTable'
 import * as idm from '../services/idm'
 
 class TeamPayroll extends React.Component {
@@ -23,6 +23,7 @@ class TeamPayroll extends React.Component {
               return { ...employee, name, role }
             })
           )
+
           this.setState({ employees })
         })
     }
