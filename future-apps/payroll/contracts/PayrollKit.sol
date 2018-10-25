@@ -13,6 +13,7 @@ import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/ppf-contracts/contracts/IFeed.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
+import "@aragon/apps-shared-minime/contracts/ITokenController.sol";
 
 import "./Payroll.sol";
 
@@ -24,7 +25,7 @@ contract PPFMock is IFeed {
   }
 }
 
-contract KitBase is APMNamehash, EVMScriptRegistryConstants {
+contract KitBase is APMNamehash, EVMScriptRegistryConstants, ITokenController {
     ENS public ens;
     DAOFactory public fac;
 
@@ -109,13 +110,14 @@ contract PayrollKit is KitBase {
       finance.initialize(vault, financePeriodDuration);
       payroll.initialize(finance, denominationToken, priceFeed, rateExpiryTime);
       tokenManager.initialize(token, true, 0);
-      //
-      // acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
-      //
-      // tokenManager.mint(this, amount);
-      // token.approve(finance, amount);
-      // finance.deposit(token, amount, "Initial deployment");
 
+      acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
+
+      tokenManager.mint(this, amount);
+      token.approve(finance, amount);
+      finance.deposit(token, amount, "Initial deployment");
+
+      deployTokens(finance);
 
       // Payroll permissions
       acl.createPermission(employer, payroll, payroll.ADD_EMPLOYEE_ROLE(), root);
@@ -180,20 +182,29 @@ contract PayrollKit is KitBase {
       // MiniMeToken token2 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 2", 18, "TK2", true);
       // MiniMeToken token3 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 3", 18, "TK3", true);
 
-      token1.generateTokens(this, amount);
-      // token2.generateTokens(this, amount);
-      // token3.generateTokens(this, amount);
+      token1.changeController(this);
+      token1.generateTokens(this, 10000000);
+      // // token2.generateTokens(this, amount);
+      // // token3.generateTokens(this, amount);
 
-      token1.approve(finance, amount);
-      // token2.approve(finance, amount);
-      // token3.approve(finance, amount);
+      token1.approve(finance, 10000000);
+      // // token2.approve(finance, amount);
+      // // token3.approve(finance, amount);
 
-      finance.deposit(token1, amount, "Initial deployment");
+      finance.deposit(token1, 10000000, "Initial deployment");
       // finance.deposit(token2, amount, "Initial deployment");
       // finance.deposit(token3, amount, "Initial deployment");
     }
 
     function onApprove(address, address, uint) public returns (bool) {
         return true;
+    }
+
+    function onTransfer(address _from, address _to, uint _amount) public returns (bool) {
+        return true;
+    }
+
+    function proxyPayment(address) public payable returns (bool) {
+        return false;
     }
 }
