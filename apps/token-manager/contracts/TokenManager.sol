@@ -29,6 +29,19 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
 
     uint256 public constant MAX_VESTINGS_PER_ADDRESS = 50;
 
+    string private constant ERROR_NO_VESTING = "TM_NO_VESTING";
+    string private constant ERROR_TOKEN_CONTROLLER = "TM_TOKEN_CONTROLLER";
+    string private constant ERROR_MINT_BALANCE_INCREASE_NOT_ALLOWED = "TM_MINT_BAL_INC_NOT_ALLOWED";
+    string private constant ERROR_ASSIGN_BALANCE_INCREASE_NOT_ALLOWED = "TM_ASSIGN_BAL_INC_NOT_ALLOWED";
+    string private constant ERROR_TOO_MANY_VESTINGS = "TM_TOO_MANY_VESTINGS";
+    string private constant ERROR_WRONG_CLIFF_DATE = "TM_WRONG_CLIFF_DATE";
+    string private constant ERROR_VESTING_NOT_REVOKABLE = "TM_VESTING_NOT_REVOKABLE";
+    string private constant ERROR_REVOKE_TRANSFER_FROM_REVERTED = "TM_REVOKE_TRANSFER_FROM_REVERTED";
+    string private constant ERROR_ASSIGN_TRANSFER_FROM_REVERTED = "TM_ASSIGN_TRANSFER_FROM_REVERTED";
+    string private constant ERROR_CAN_NOT_FORWARD = "TM_CAN_NOT_FORWARD";
+    string private constant ERROR_ON_TRANSFER_WRONG_SENDER = "TM_TRANSFER_WRONG_SENDER";
+    string private constant ERROR_PROXY_PAYMENT_WRONG_SENDER = "TM_PROXY_PAYMENT_WRONG_SENDER";
+
     struct TokenVesting {
         uint256 amount;
         uint64 start;
@@ -51,12 +64,12 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
 
     modifier vestingExists(address _holder, uint256 _vestingId) {
         // TODO: it's not checking for gaps that may appear because of deletes in revokeVesting function
-        require(_vestingId < vestingsLengths[_holder]);
+        require(_vestingId < vestingsLengths[_holder], ERROR_NO_VESTING);
         _;
     }
 
     /**
-    * @notice Initializes Token Manager for `_token.symbol(): string`, `transerable ? 'T' : 'Not t'`ransferable`_maxAccountTokens > 0 ? ', with a maximum of ' _maxAccountTokens ' per account' : ''`.
+    * @notice Initialize Token Manager for `_token.symbol(): string`, whose tokens are `transferable ? 'not' : ''` transferable`_maxAccountTokens > 0 ? ' and limited to a maximum of ' + @tokenAmount(_token, _maxAccountTokens, false) + ' per account' : ''`
     * @param _token MiniMeToken address for the managed token (Token Manager instance must be already set as the token controller)
     * @param _transferable whether the token can be transferred by holders
     * @param _maxAccountTokens Maximum amount of tokens an account can have (0 for infinite tokens)
@@ -71,7 +84,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     {
         initialized();
 
-        require(_token.controller() == address(this));
+        require(_token.controller() == address(this), ERROR_TOKEN_CONTROLLER);
 
         token = _token;
         maxAccountTokens = _maxAccountTokens == 0 ? uint256(-1) : _maxAccountTokens;
@@ -82,17 +95,17 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     /**
-    * @notice Mint `_amount / 10^18` tokens for `_receiver`
+    * @notice Mint `@tokenAmount(self.token(), _amount, false)` tokens for `_receiver`
     * @param _receiver The address receiving the tokens
     * @param _amount Number of tokens minted
     */
     function mint(address _receiver, uint256 _amount) external authP(MINT_ROLE, arr(_receiver, _amount)) {
-        require(_isBalanceIncreaseAllowed(_receiver, _amount));
+        require(_isBalanceIncreaseAllowed(_receiver, _amount), ERROR_MINT_BALANCE_INCREASE_NOT_ALLOWED);
         _mint(_receiver, _amount);
     }
 
     /**
-    * @notice Mint `_amount / 10^18` tokens for the Token Manager
+    * @notice Mint `@tokenAmount(self.token(), _amount, false)` tokens for the Token Manager
     * @param _amount Number of tokens minted
     */
     function issue(uint256 _amount) external authP(ISSUE_ROLE, arr(_amount)) {
@@ -100,7 +113,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     /**
-    * @notice Assign `_amount / 10^18` tokens to `_receiver` from Token Manager's holdings
+    * @notice Assign `@tokenAmount(self.token(), _amount, false)` tokens to `_receiver` from the Token Manager's holdings
     * @param _receiver The address receiving the tokens
     * @param _amount Number of tokens transferred
     */
@@ -109,8 +122,8 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     /**
-    * @notice Burn `_amount / 10^18` tokens from `_holder`
-    * @param _holder Holder being removed tokens
+    * @notice Burn `@tokenAmount(self.token(), _amount, false)` tokens from `_holder`
+    * @param _holder Holder of tokens being burned
     * @param _amount Number of tokens being burned
     */
     function burn(address _holder, uint256 _amount) external authP(BURN_ROLE, arr(_holder, _amount)) {
@@ -119,7 +132,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     /**
-    * @notice Assign `_amount / 10^18` tokens to `_receiver` from the Token Manager's holdings with a `_revokable : 'revokable' : ''` vesting starting at `_start`, cliff at `_cliff` (first portion of tokens transferable), and completed vesting at `_vesting` (all tokens transferable)
+    * @notice Assign `@tokenAmount(self.token(), _amount, false)` tokens to `_receiver` from the Token Manager's holdings with a `_revokable : 'revokable' : ''` vesting starting at `@formatDate(_start)`, cliff at `@formatDate(_cliff)` (first portion of tokens transferable), and completed vesting at `@formatDate(_vested)` (all tokens transferable)
     * @param _receiver The address receiving the tokens
     * @param _amount Number of tokens vested
     * @param _start Date the vesting calculations start
@@ -139,9 +152,9 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
         authP(ASSIGN_ROLE, arr(_receiver, _amount))
         returns (uint256)
     {
-        require(vestingsLengths[_receiver] < MAX_VESTINGS_PER_ADDRESS);
+        require(vestingsLengths[_receiver] < MAX_VESTINGS_PER_ADDRESS, ERROR_TOO_MANY_VESTINGS);
 
-        require(_start <= _cliff && _cliff <= _vested);
+        require(_start <= _cliff && _cliff <= _vested, ERROR_WRONG_CLIFF_DATE);
 
         uint256 vestingId = vestingsLengths[_receiver]++;
         vestings[_receiver][vestingId] = TokenVesting(
@@ -160,8 +173,8 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     /**
-    * @notice Revoke vesting `_vestingId` from `_holder`, returning unvested tokens to Token Manager
-    * @param _holder Address getting vesting revoked
+    * @notice Revoke vesting #`_vestingId` from `_holder`, returning unvested tokens to the Token Manager
+    * @param _holder Address whose vesting to revoke
     * @param _vestingId Numeric id of the vesting
     */
     function revokeVesting(address _holder, uint256 _vestingId)
@@ -170,7 +183,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
         vestingExists(_holder, _vestingId)
     {
         TokenVesting storage v = vestings[_holder][_vestingId];
-        require(v.revokable);
+        require(v.revokable, ERROR_VESTING_NOT_REVOKABLE);
 
         uint256 nonVested = _calculateNonVestedTokens(
             v.amount,
@@ -185,7 +198,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
 
         // transferFrom always works as controller
         // onTransfer hook always allows if transfering to token controller
-        require(token.transferFrom(_holder, address(this), nonVested));
+        require(token.transferFrom(_holder, address(this), nonVested), ERROR_REVOKE_TRANSFER_FROM_REVERTED);
 
         emit RevokeVesting(_holder, _vestingId, nonVested);
     }
@@ -196,7 +209,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     * @param _evmScript Script being executed
     */
     function forward(bytes _evmScript) public {
-        require(canForward(msg.sender, _evmScript));
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
         bytes memory input = new bytes(0); // TODO: Consider input for this
 
         // Add the managed token to the blacklist to disallow a token holder from executing actions
@@ -246,7 +259,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     * @return False if the controller does not authorize the transfer
     */
     function onTransfer(address _from, address _to, uint _amount) public isInitialized returns (bool) {
-        require(msg.sender == address(token));
+        require(msg.sender == address(token), ERROR_ON_TRANSFER_WRONG_SENDER);
 
         bool includesTokenManager = _from == address(this) || _to == address(this);
 
@@ -268,7 +281,7 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
         // Sender check is required to avoid anyone sending ETH to the Token Manager through this method
         // Even though it is tested, solidity-coverage doesnt get it because
         // MiniMeToken is not instrumented and entire tx is reverted
-        require(msg.sender == address(token));
+        require(msg.sender == address(token), ERROR_PROXY_PAYMENT_WRONG_SENDER);
         return false;
     }
 
@@ -373,9 +386,9 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     }
 
     function _assign(address _receiver, uint256 _amount) internal {
-        require(_isBalanceIncreaseAllowed(_receiver, _amount));
+        require(_isBalanceIncreaseAllowed(_receiver, _amount), ERROR_ASSIGN_BALANCE_INCREASE_NOT_ALLOWED);
         // Must use transferFrom() as transfer() does not give the token controller full control
-        require(token.transferFrom(this, _receiver, _amount));
+        require(token.transferFrom(this, _receiver, _amount), ERROR_ASSIGN_TRANSFER_FROM_REVERTED);
     }
 
     function _mint(address _receiver, uint256 _amount) internal {

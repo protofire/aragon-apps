@@ -21,47 +21,56 @@ contract Voting is IForwarder, AragonApp {
     bytes32 public constant MODIFY_SUPPORT_ROLE = keccak256("MODIFY_SUPPORT_ROLE");
     bytes32 public constant MODIFY_QUORUM_ROLE = keccak256("MODIFY_QUORUM_ROLE");
 
-    uint256 public constant PCT_BASE = 10 ** 18; // 0% = 0; 1% = 10^16; 100% = 10^18
+    uint64 public constant PCT_BASE = 10 ** 18; // 0% = 0; 1% = 10^16; 100% = 10^18
+
+    string private constant ERROR_NO_VOTE = "VOTING_NO_VOTE";
+    string private constant ERROR_INIT_PCTS = "VOTING_INIT_PCTS";
+    string private constant ERROR_CHANGE_SUPPORT_PCTS = "VOTING_CHANGE_SUPPORT_PCTS";
+    string private constant ERROR_CHANGE_QUORUM_PCTS = "VOTING_CHANGE_QUORUM_PCTS";
+    string private constant ERROR_INIT_SUPPORT_TOO_BIG = "VOTING_INIT_SUPPORT_TOO_BIG";
+    string private constant ERROR_CHANGE_SUPPORT_TOO_BIG = "VOTING_CHANGE_SUPP_TOO_BIG";
+    string private constant ERROR_CAN_NOT_VOTE = "VOTING_CAN_NOT_VOTE";
+    string private constant ERROR_CAN_NOT_EXECUTE = "VOTING_CAN_NOT_EXECUTE";
+    string private constant ERROR_CAN_NOT_FORWARD = "VOTING_CAN_NOT_FORWARD";
+    string private constant ERROR_NO_VOTING_POWER = "VOTING_NO_VOTING_POWER";
 
     enum VoterState { Absent, Yea, Nay }
 
     struct Vote {
-        address creator;
+        bool executed;
         uint64 startDate;
-        uint256 snapshotBlock;
-        uint256 supportRequiredPct;
-        uint256 minAcceptQuorumPct;
+        uint64 snapshotBlock;
+        uint64 supportRequiredPct;
+        uint64 minAcceptQuorumPct;
         uint256 yea;
         uint256 nay;
-        uint256 totalVoters;
-        string metadata;
+        uint256 votingPower;
         bytes executionScript;
-        bool executed;
         mapping (address => VoterState) voters;
     }
 
     MiniMeToken public token;
-    uint256 public supportRequiredPct;
-    uint256 public minAcceptQuorumPct;
+    uint64 public supportRequiredPct;
+    uint64 public minAcceptQuorumPct;
     uint64 public voteTime;
 
     // We are mimicing an array, we use a mapping instead to make app upgrade more graceful
     mapping (uint256 => Vote) internal votes;
     uint256 public votesLength;
 
-    event StartVote(uint256 indexed voteId);
+    event StartVote(uint256 indexed voteId, address indexed creator, string metadata);
     event CastVote(uint256 indexed voteId, address indexed voter, bool supports, uint256 stake);
     event ExecuteVote(uint256 indexed voteId);
-    event ChangeSupportRequired(uint256 supportRequiredPct);
-    event ChangeMinQuorum(uint256 minAcceptQuorumPct);
+    event ChangeSupportRequired(uint64 supportRequiredPct);
+    event ChangeMinQuorum(uint64 minAcceptQuorumPct);
 
     modifier voteExists(uint256 _voteId) {
-        require(_voteId < votesLength);
+        require(_voteId < votesLength, ERROR_NO_VOTE);
         _;
     }
 
     /**
-    * @notice Initializes Voting app with `_token.symbol(): string` for governance, minimum support of `(_supportRequiredPct - _supportRequiredPct % 10^16) / 10^14`, minimum acceptance quorum of `(_minAcceptQuorumPct - _minAcceptQuorumPct % 10^16) / 10^14` and vote duations of `(_voteTime - _voteTime % 86400) / 86400` day `_voteTime >= 172800 ? 's' : ''`
+    * @notice Initialize Voting app with `_token.symbol(): string` for governance, minimum support of `@formatPct(_supportRequiredPct)`%, minimum acceptance quorum of `@formatPct(_minAcceptQuorumPct)`%, and a voting duration of `@transformTime(_voteTime)`
     * @param _token MiniMeToken Address that will be used as governance token
     * @param _supportRequiredPct Percentage of yeas in casted votes for a vote to succeed (expressed as a percentage of 10^18; eg. 10^16 = 1%, 10^18 = 100%)
     * @param _minAcceptQuorumPct Percentage of yeas in total possible votes for a vote to succeed (expressed as a percentage of 10^18; eg. 10^16 = 1%, 10^18 = 100%)
@@ -69,8 +78,8 @@ contract Voting is IForwarder, AragonApp {
     */
     function initialize(
         MiniMeToken _token,
-        uint256 _supportRequiredPct,
-        uint256 _minAcceptQuorumPct,
+        uint64 _supportRequiredPct,
+        uint64 _minAcceptQuorumPct,
         uint64 _voteTime
     )
         external
@@ -78,8 +87,8 @@ contract Voting is IForwarder, AragonApp {
     {
         initialized();
 
-        require(_minAcceptQuorumPct <= _supportRequiredPct);
-        require(_supportRequiredPct < PCT_BASE);
+        require(_minAcceptQuorumPct <= _supportRequiredPct, ERROR_INIT_PCTS);
+        require(_supportRequiredPct < PCT_BASE, ERROR_INIT_SUPPORT_TOO_BIG);
 
         token = _token;
         supportRequiredPct = _supportRequiredPct;
@@ -88,29 +97,29 @@ contract Voting is IForwarder, AragonApp {
     }
 
     /**
-    * @notice Change required support to `(_supportRequiredPct - _supportRequiredPct % 10^16) / 10^14`%
+    * @notice Change required support to `@formatPct(_supportRequiredPct)`%
     * @param _supportRequiredPct New required support
     */
-    function changeSupportRequiredPct(uint256 _supportRequiredPct)
+    function changeSupportRequiredPct(uint64 _supportRequiredPct)
         external
-        authP(MODIFY_SUPPORT_ROLE, arr(_supportRequiredPct, supportRequiredPct))
+        authP(MODIFY_SUPPORT_ROLE, arr(uint256(_supportRequiredPct), uint256(supportRequiredPct)))
     {
-        require(minAcceptQuorumPct <= _supportRequiredPct);
-        require(_supportRequiredPct < PCT_BASE);
+        require(minAcceptQuorumPct <= _supportRequiredPct, ERROR_CHANGE_SUPPORT_PCTS);
+        require(_supportRequiredPct < PCT_BASE, ERROR_CHANGE_SUPPORT_TOO_BIG);
         supportRequiredPct = _supportRequiredPct;
 
         emit ChangeSupportRequired(_supportRequiredPct);
     }
 
     /**
-    * @notice Change minimum acceptance quorum to `(_minAcceptQuorumPct - _minAcceptQuorumPct % 10^16) / 10^14`%
+    * @notice Change minimum acceptance quorum to `@formatPct(_minAcceptQuorumPct)`%
     * @param _minAcceptQuorumPct New acceptance quorum
     */
-    function changeMinAcceptQuorumPct(uint256 _minAcceptQuorumPct)
+    function changeMinAcceptQuorumPct(uint64 _minAcceptQuorumPct)
         external
-        authP(MODIFY_QUORUM_ROLE, arr(_minAcceptQuorumPct, minAcceptQuorumPct))
+        authP(MODIFY_QUORUM_ROLE, arr(uint256(_minAcceptQuorumPct), uint256(minAcceptQuorumPct)))
     {
-        require(_minAcceptQuorumPct <= supportRequiredPct);
+        require(_minAcceptQuorumPct <= supportRequiredPct, ERROR_CHANGE_QUORUM_PCTS);
         minAcceptQuorumPct = _minAcceptQuorumPct;
 
         emit ChangeMinQuorum(_minAcceptQuorumPct);
@@ -127,13 +136,13 @@ contract Voting is IForwarder, AragonApp {
     }
 
     /**
-     * @notice Create a new vote about "`_metadata`"
-     * @param _executionScript EVM script to be executed on approval
-     * @param _metadata Vote metadata
-     * @param _castVote Whether to also cast newly created vote
-     * @param _executesIfDecided Whether to also immediately execute newly created vote if decided
-     * @return voteId id for newly created vote
-     */
+    * @notice Create a new vote about "`_metadata`"
+    * @param _executionScript EVM script to be executed on approval
+    * @param _metadata Vote metadata
+    * @param _castVote Whether to also cast newly created vote
+    * @param _executesIfDecided Whether to also immediately execute newly created vote if decided
+    * @return voteId id for newly created vote
+    */
     function newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided)
         external
         auth(CREATE_VOTES_ROLE)
@@ -151,18 +160,18 @@ contract Voting is IForwarder, AragonApp {
     * @param _executesIfDecided Whether the vote should execute its action if it becomes decided
     */
     function vote(uint256 _voteId, bool _supports, bool _executesIfDecided) external voteExists(_voteId) {
-        require(canVote(_voteId, msg.sender));
+        require(canVote(_voteId, msg.sender), ERROR_CAN_NOT_VOTE);
         _vote(_voteId, _supports, msg.sender, _executesIfDecided);
     }
 
     /**
-    * @notice Execute the result of vote #`_voteId`
+    * @notice Execute vote #`_voteId`
     * @dev Initialization check is implicitly provided by `voteExists()` as new votes can only be
     *      created via `newVote(),` which requires initialization
     * @param _voteId Id for vote
     */
     function executeVote(uint256 _voteId) external voteExists(_voteId) {
-        require(canExecute(_voteId));
+        require(canExecute(_voteId), ERROR_CAN_NOT_EXECUTE);
         _executeVote(_voteId);
     }
 
@@ -176,7 +185,7 @@ contract Voting is IForwarder, AragonApp {
     * @param _evmScript Start vote with script
     */
     function forward(bytes _evmScript) public {
-        require(canForward(msg.sender, _evmScript));
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
         _newVote(_evmScript, "", true, true);
     }
 
@@ -199,7 +208,7 @@ contract Voting is IForwarder, AragonApp {
         }
 
         // Voting is already decided
-        if (_isValuePct(vote_.yea, vote_.totalVoters, vote_.supportRequiredPct)) {
+        if (_isValuePct(vote_.yea, vote_.votingPower, vote_.supportRequiredPct)) {
             return true;
         }
 
@@ -214,7 +223,7 @@ contract Voting is IForwarder, AragonApp {
             return false;
         }
         // Has min quorum?
-        if (!_isValuePct(vote_.yea, vote_.totalVoters, vote_.minAcceptQuorumPct)) {
+        if (!_isValuePct(vote_.yea, vote_.votingPower, vote_.minAcceptQuorumPct)) {
             return false;
         }
 
@@ -228,14 +237,13 @@ contract Voting is IForwarder, AragonApp {
         returns (
             bool open,
             bool executed,
-            address creator,
             uint64 startDate,
-            uint256 snapshotBlock,
-            uint256 supportRequired,
-            uint256 minAcceptQuorum,
+            uint64 snapshotBlock,
+            uint64 supportRequired,
+            uint64 minAcceptQuorum,
             uint256 yea,
             uint256 nay,
-            uint256 totalVoters,
+            uint256 votingPower,
             bytes script
         )
     {
@@ -243,19 +251,14 @@ contract Voting is IForwarder, AragonApp {
 
         open = _isVoteOpen(vote_);
         executed = vote_.executed;
-        creator = vote_.creator;
         startDate = vote_.startDate;
         snapshotBlock = vote_.snapshotBlock;
         supportRequired = vote_.supportRequiredPct;
         minAcceptQuorum = vote_.minAcceptQuorumPct;
         yea = vote_.yea;
         nay = vote_.nay;
-        totalVoters = vote_.totalVoters;
+        votingPower = vote_.votingPower;
         script = vote_.executionScript;
-    }
-
-    function getVoteMetadata(uint256 _voteId) public view voteExists(_voteId) returns (string) {
-        return votes[_voteId].metadata;
     }
 
     function getVoterState(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (VoterState) {
@@ -266,18 +269,19 @@ contract Voting is IForwarder, AragonApp {
         internal
         returns (uint256 voteId)
     {
+        uint256 votingPower = token.totalSupplyAt(vote_.snapshotBlock);
+        require(votingPower > 0, ERROR_NO_VOTING_POWER);
+
         voteId = votesLength++;
         Vote storage vote_ = votes[voteId];
-        vote_.executionScript = _executionScript;
-        vote_.creator = msg.sender;
         vote_.startDate = getTimestamp64();
-        vote_.metadata = _metadata;
-        vote_.snapshotBlock = getBlockNumber() - 1; // avoid double voting in this very block
-        vote_.totalVoters = token.totalSupplyAt(vote_.snapshotBlock);
+        vote_.snapshotBlock = getBlockNumber64() - 1; // avoid double voting in this very block
         vote_.supportRequiredPct = supportRequiredPct;
         vote_.minAcceptQuorumPct = minAcceptQuorumPct;
+        vote_.votingPower = votingPower;
+        vote_.executionScript = _executionScript;
 
-        emit StartVote(voteId);
+        emit StartVote(voteId, msg.sender, _metadata);
 
         if (_castVote && canVote(voteId, msg.sender)) {
             _vote(voteId, true, msg.sender, _executesIfDecided);
@@ -343,7 +347,6 @@ contract Voting is IForwarder, AragonApp {
         }
 
         uint256 computedPct = _value.mul(PCT_BASE) / _total;
-
         return computedPct > _pct;
     }
 }

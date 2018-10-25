@@ -4,7 +4,8 @@ const timeTravel = require('@aragon/test-helpers/timeTravel')(web3)
 
 const getContract = name => artifacts.require(name)
 const pct16 = x => new web3.BigNumber(x).times(new web3.BigNumber(10).toPower(16))
-const createdSurveyId = receipt => receipt.logs.filter(x => x.event == 'StartSurvey')[0].args.surveyId
+const surveyEvent = receipt => receipt.logs.filter(x => x.event == 'StartSurvey')[0].args
+const createdSurveyId = receipt => surveyEvent(receipt).surveyId
 
 contract('Survey app', accounts => {
   let daoFact, surveyBase, survey
@@ -42,7 +43,7 @@ contract('Survey app', accounts => {
 
     await acl.createPermission(root, dao.address, APP_MANAGER_ROLE, root, { from: root })
 
-    const receipt = await dao.newAppInstance('0x1234', surveyBase.address, { from: root })
+    const receipt = await dao.newAppInstance('0x1234', surveyBase.address, '0x', false, { from: root })
     survey = getContract('Survey').at(receipt.logs.filter(l => l.event == 'NewAppProxy')[0].args.proxy)
 
     await acl.createPermission(ANY_ENTITY, survey.address, CREATE_SURVEYS_ROLE, root, { from: root })
@@ -101,20 +102,23 @@ contract('Survey app', accounts => {
       let optionsCount = 10e9 // lots of options
 
       beforeEach(async () => {
-        surveyId = createdSurveyId(await survey.newSurvey('metadata', optionsCount, { from: nonHolder }))
+        createdEvent = surveyEvent(await survey.newSurvey('metadata', optionsCount, { from: nonHolder }))
+        surveyId = createdEvent.surveyId
+        creator = createdEvent.creator
+        metadata = createdEvent.metadata
       })
 
       it('has correct state', async () => {
-        const [isOpen, creator, startDate, snapshotBlock, minParticipationPct, totalVoters, participation, options] = await survey.getSurvey(surveyId)
+        const [isOpen, startDate, snapshotBlock, minParticipationPct, votingPower, participation, options] = await survey.getSurvey(surveyId)
 
         assert.isTrue(isOpen, 'survey should be open')
         assert.equal(creator, nonHolder, 'creator should be correct')
         assert.equal(snapshotBlock, await getBlockNumber() - 1, 'snapshot block should be correct')
         assert.deepEqual(minParticipationPct, minimumAcceptanceParticipationPct, 'min participation should be survey min participation')
-        assert.equal(totalVoters, 100, 'total voters should be 100')
+        assert.equal(votingPower, 100, 'total voters should be 100')
         assert.equal(participation, 0, 'initial participation should be 0') // didn't vote even though creator was holder
         assert.equal(options, optionsCount, 'number of options should be correct')
-        assert.equal(await survey.getSurveyMetadata(surveyId), 'metadata', 'should have returned correct metadata')
+        assert.equal(metadata, 'metadata', 'should have returned correct metadata')
         const voterState = await survey.getVoterState(surveyId, nonHolder)
         assert.equal(voterState[0].length, 0, 'nonHolder should not have voted (options)')
         assert.equal(voterState[1].length, 0, 'nonHolder should not have voted (stakes)')
@@ -152,7 +156,7 @@ contract('Survey app', accounts => {
 
         const state = await survey.getSurvey(surveyId)
 
-        assert.equal(state[6], 100, 'participation should be 100')
+        assert.equal(state[5], 100, 'participation should be 100')
 
       })
 
@@ -207,7 +211,7 @@ contract('Survey app', accounts => {
         await timeTravel(surveyTime + 1)
 
         const state = await survey.getSurvey(surveyId)
-        assert.deepEqual(state[4], minimumAcceptanceParticipationPct, 'acceptance participation in survey should stay equal')
+        assert.deepEqual(state[3], minimumAcceptanceParticipationPct, 'acceptance participation in survey should stay equal')
       })
 
       it('token transfers dont affect voting', async () => {

@@ -1,34 +1,128 @@
 import Aragon from '@aragon/client'
-import { combineLatest } from './rxjs'
+import { of } from './rxjs'
 import voteSettings, { hasLoadedVoteSettings } from './vote-settings'
 import { EMPTY_CALLSCRIPT } from './vote-utils'
+import tokenDecimalsAbi from './abi/token-decimals.json'
+import tokenSymbolAbi from './abi/token-symbol.json'
+
+const INITIALIZATION_TRIGGER = Symbol('INITIALIZATION_TRIGGER')
+
+const tokenAbi = [].concat(tokenDecimalsAbi, tokenSymbolAbi)
 
 const app = new Aragon()
 
-// Hook up the script as an aragon.js store
-app.store(async (state, { event, returnValues }) => {
-  let nextState = {
-    ...state,
-    // Fetch the app's settings, if we haven't already
-    ...(!hasLoadedVoteSettings(state) ? await loadVoteSettings() : {}),
-  }
+/*
+ * Calls `callback` exponentially, everytime `retry()` is called.
+ *
+ * Usage:
+ *
+ * retryEvery(retry => {
+ *  // do something
+ *
+ *  if (condition) {
+ *    // retry in 1, 2, 4, 8 seconds… as long as the condition passes.
+ *    retry()
+ *  }
+ * }, 1000, 2)
+ *
+ */
+const retryEvery = (callback, initialRetryTimer = 1000, increaseFactor = 5) => {
+  const attempt = (retryTimer = initialRetryTimer) => {
+    // eslint-disable-next-line standard/no-callback-literal
+    callback(() => {
+      console.error(`Retrying in ${retryTimer / 1000}s...`)
 
-  switch (event) {
-    case 'CastVote':
-      nextState = await castVote(nextState, returnValues)
-      break
-    case 'ExecuteVote':
-      nextState = await executeVote(nextState, returnValues)
-      break
-    case 'StartVote':
-      nextState = await startVote(nextState, returnValues)
-      break
-    default:
-      break
+      // Exponentially backoff attempts
+      setTimeout(() => attempt(retryTimer * increaseFactor), retryTimer)
+    })
   }
+  attempt()
+}
 
-  return nextState
+// Get the token address to initialize ourselves
+retryEvery(retry => {
+  app
+    .call('token')
+    .first()
+    .subscribe(initialize, err => {
+      console.error(
+        'Could not start background script execution due to the contract not loading the token:',
+        err
+      )
+      retry()
+    })
 })
+
+async function initialize(tokenAddr) {
+  const token = app.external(tokenAddr, tokenAbi)
+
+  let tokenSymbol
+  try {
+    tokenSymbol = await loadTokenSymbol(token)
+    app.identify(tokenSymbol)
+  } catch (err) {
+    console.error(
+      `Failed to load token symbol for token at ${tokenAddr} due to:`,
+      err
+    )
+  }
+
+  let tokenDecimals
+  try {
+    tokenDecimals = await loadTokenDecimals(token)
+  } catch (err) {
+    console.err(
+      `Failed to load token decimals for token at ${tokenAddr} due to:`,
+      err
+    )
+    console.err('Defaulting to 18...')
+    tokenDecimals = '18'
+  }
+
+  return createStore(token, { decimals: tokenDecimals, symbol: tokenSymbol })
+}
+
+// Hook up the script as an aragon.js store
+async function createStore(token, tokenSettings) {
+  const { decimals: tokenDecimals, symbol: tokenSymbol } = tokenSettings
+  return app.store(
+    async (state, { event, returnValues }) => {
+      let nextState = {
+        ...state,
+        // Fetch the app's settings, if we haven't already
+        ...(!hasLoadedVoteSettings(state) ? await loadVoteSettings() : {}),
+      }
+
+      if (event === INITIALIZATION_TRIGGER) {
+        nextState = {
+          ...nextState,
+          tokenDecimals,
+          tokenSymbol,
+        }
+      } else {
+        switch (event) {
+          case 'CastVote':
+            nextState = await castVote(nextState, returnValues)
+            break
+          case 'ExecuteVote':
+            nextState = await executeVote(nextState, returnValues)
+            break
+          case 'StartVote':
+            nextState = await startVote(nextState, returnValues)
+            break
+          default:
+            break
+        }
+      }
+
+      return nextState
+    },
+    [
+      // Always initialize the store with our own home-made event
+      of({ event: INITIALIZATION_TRIGGER }),
+    ]
+  )
+}
 
 /***********************
  *                     *
@@ -41,7 +135,10 @@ async function castVote(state, { voteId }) {
   // cause do we really want more than one source of truth with a blockchain?
   const transform = async vote => ({
     ...vote,
-    data: await loadVoteData(voteId),
+    data: {
+      ...vote.data,
+      ...(await loadVoteData(voteId)),
+    },
   })
   return updateState(state, voteId, transform)
 }
@@ -54,8 +151,15 @@ async function executeVote(state, { voteId }) {
   return updateState(state, voteId, transform)
 }
 
-async function startVote(state, { voteId }) {
-  return updateState(state, voteId, vote => vote)
+async function startVote(state, { creator, metadata, voteId }) {
+  return updateState(state, voteId, vote => ({
+    ...vote,
+    data: {
+      ...vote.data,
+      creator,
+      metadata,
+    },
+  }))
 }
 
 /***********************
@@ -70,34 +174,26 @@ async function loadVoteDescription(vote) {
   }
 
   const path = await app.describeScript(vote.script).toPromise()
-
   vote.description = path
-    .map(step => {
-      const identifier = step.identifier ? ` (${step.identifier})` : ''
-      const app = step.name ? `${step.name}${identifier}` : `${step.to}`
+    ? path
+        .map(step => {
+          const identifier = step.identifier ? ` (${step.identifier})` : ''
+          const app = step.name ? `${step.name}${identifier}` : `${step.to}`
 
-      return `${app}: ${step.description || 'No description'}`
-    })
-    .join('\n')
+          return `${app}: ${step.description || 'No description'}`
+        })
+        .join('\n')
+    : ''
 
   return vote
 }
 
 function loadVoteData(voteId) {
   return new Promise(resolve => {
-    combineLatest(
-      app.call('getVote', voteId),
-      app.call('getVoteMetadata', voteId)
-    )
+    app
+      .call('getVote', voteId)
       .first()
-      .subscribe(([vote, metadata]) => {
-        loadVoteDescription(vote).then(vote => {
-          resolve({
-            ...marshallVote(vote),
-            metadata,
-          })
-        })
-      })
+      .subscribe(vote => resolve(loadVoteDescription(marshallVote(vote))))
   })
 }
 
@@ -137,12 +233,8 @@ function loadVoteSettings() {
             .call(name)
             .first()
             .map(val => {
-              if (type === 'number') {
-                return parseInt(val, 10)
-              }
               if (type === 'time') {
-                // Adjust for js time (in ms vs s)
-                return parseInt(val, 10) * 1000
+                return marshallDate(val)
               }
               return val
             })
@@ -162,30 +254,53 @@ function loadVoteSettings() {
     })
 }
 
-// Apply transmations to a vote received from web3
+function loadTokenDecimals(tokenContract) {
+  return new Promise((resolve, reject) => {
+    tokenContract
+      .decimals()
+      .first()
+      .subscribe(resolve, reject)
+  })
+}
+
+function loadTokenSymbol(tokenContract) {
+  return new Promise((resolve, reject) => {
+    tokenContract
+      .symbol()
+      .first()
+      .subscribe(resolve, reject)
+  })
+}
+
+// Apply transformations to a vote received from web3
 // Note: ignores the 'open' field as we calculate that locally
 function marshallVote({
-  creator,
   executed,
   minAcceptQuorum,
   nay,
   snapshotBlock,
   startDate,
-  totalVoters,
+  supportRequired,
+  votingPower,
   yea,
   script,
-  description,
 }) {
   return {
-    creator,
     executed,
-    minAcceptQuorum: parseInt(minAcceptQuorum, 10),
-    nay: parseInt(nay, 10),
-    snapshotBlock: parseInt(snapshotBlock, 10),
-    startDate: parseInt(startDate, 10) * 1000, // adjust for js time (in ms vs s)
-    totalVoters: parseInt(totalVoters, 10),
-    yea: parseInt(yea, 10),
+    minAcceptQuorum,
+    nay,
     script,
-    description,
+    supportRequired,
+    votingPower,
+    yea,
+    // Like times, blocks should be safe to represent as real numbers
+    snapshotBlock: parseInt(snapshotBlock, 10),
+    startDate: marshallDate(startDate, 10),
   }
+}
+
+function marshallDate(date) {
+  // Represent dates as real numbers, as it's very unlikely they'll hit the limit...
+  // Adjust for js time (in ms vs s)
+  return parseInt(date, 10) * 1000
 }

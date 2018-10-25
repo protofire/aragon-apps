@@ -1,8 +1,7 @@
 const voteSettings = [
   ['token', 'tokenAddress'],
   ['voteTime', 'voteTime', 'time'],
-  ['PCT_BASE', 'pctBase', 'number'],
-  ['supportRequiredPct', 'supportRequiredPct', 'number'],
+  ['PCT_BASE', 'pctBase', 'bignumber'],
 ]
 
 export function hasLoadedVoteSettings(state) {
