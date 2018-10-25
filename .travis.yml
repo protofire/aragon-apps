@@ -1,6 +1,4 @@
 sudo: required
-services:
-  - docker
 language: node_js
 cache:
   directories:
@@ -35,6 +33,9 @@ env:
   - TASK=coverage:vault
   - TASK=coverage:voting
   - TASK=test:shared
+matrix:
+  allow_failures:
+    - env: TASK=coverage:finance
 before_script:
   - npm prune
 script:

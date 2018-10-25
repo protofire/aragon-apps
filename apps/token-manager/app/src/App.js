@@ -8,6 +8,7 @@ import {
   Button,
   Badge,
   SidePanel,
+  font,
   observe,
 } from '@aragon/ui'
 import EmptyState from './screens/EmptyState'
@@ -15,65 +16,85 @@ import Holders from './screens/Holders'
 import AppLayout from './components/AppLayout'
 import AssignVotePanelContent from './components/Panels/AssignVotePanelContent'
 import { hasLoadedTokenSettings } from './token-settings'
+import { addressesEqual } from './web3-utils'
+
+const initialAssignTokensConfig = {
+  mode: null,
+  holderAddress: '',
+}
 
 class App extends React.Component {
   static propTypes = {
     app: PropTypes.object.isRequired,
   }
   static defaultProps = {
-    tokenDecimals: null,
-    tokenSupply: null,
-    tokenSymbol: null,
+    appStateReady: false,
     holders: [],
     userAccount: '',
+    groupMode: false,
   }
   state = {
-    assignTokensConfig: {},
+    assignTokensConfig: initialAssignTokensConfig,
     sidepanelOpened: false,
-    tokenSettingsLoaded: false,
   }
-  componentWillReceiveProps(nextProps) {
-    const { tokenSettingsLoaded } = this.state
-    // Is this the first time we've loaded the token settings?
-    if (!tokenSettingsLoaded && hasLoadedTokenSettings(nextProps)) {
-      this.setState({
-        tokenSettingsLoaded: true,
-      })
+  getHolderBalance = address => {
+    const { holders } = this.props
+    const holder = holders.find(holder =>
+      addressesEqual(holder.address, address)
+    )
+    return holder ? holder.balance : new BN('0')
+  }
+  handleUpdateTokens = ({ amount, holder, mode }) => {
+    const { app } = this.props
+
+    if (mode === 'assign') {
+      app.mint(holder, amount)
     }
-  }
-  handleAssignTokens = ({ amount, recipient }) => {
-    const { app, tokenDecimalsBase } = this.props
-    const amountConverted = Math.floor(parseFloat(amount) * tokenDecimalsBase)
-    const toMint = new BN(`${amountConverted}`, 10)
-    app.mint(recipient, toMint.toString())
+    if (mode === 'remove') {
+      app.burn(holder, amount)
+    }
+
     this.handleSidepanelClose()
   }
-  handleAppBarLaunchAssignTokens = () => this.handleLaunchAssignTokens()
-  handleLaunchAssignTokens = recipient => {
+  handleLaunchAssignTokensNoHolder = () => {
+    this.handleLaunchAssignTokens('')
+  }
+  handleLaunchAssignTokens = address => {
     this.setState({
-      assignTokensConfig: { recipient },
+      assignTokensConfig: { mode: 'assign', holderAddress: address },
+      sidepanelOpened: true,
+    })
+  }
+  handleLaunchRemoveTokens = address => {
+    this.setState({
+      assignTokensConfig: { mode: 'remove', holderAddress: address },
       sidepanelOpened: true,
     })
   }
   handleSidepanelClose = () => {
-    this.setState({
-      assignTokensConfig: {},
-      sidepanelOpened: false,
-    })
+    this.setState({ sidepanelOpened: false })
+  }
+  handleSidepanelTransitionEnd = open => {
+    if (!open) {
+      this.setState({ assignTokensConfig: initialAssignTokensConfig })
+    }
   }
   render() {
     const {
-      tokenSymbol,
-      tokenSupply,
-      tokenDecimalsBase,
+      appStateReady,
+      groupMode,
       holders,
+      maxAccountTokens,
+      numData,
+      tokenAddress,
+      tokenDecimalsBase,
+      tokenName,
+      tokenSupply,
+      tokenSymbol,
+      tokenTransfersEnabled,
       userAccount,
     } = this.props
-    const {
-      assignTokensConfig,
-      sidepanelOpened,
-      tokenSettingsLoaded,
-    } = this.state
+    const { assignTokensConfig, sidepanelOpened } = this.state
     return (
       <AragonApp publicUrl="./aragon-ui/">
         <AppLayout>
@@ -81,14 +102,14 @@ class App extends React.Component {
             <AppBar
               title={
                 <Title>
-                  <span>Token</span>
+                  <TitleLabel>Token</TitleLabel>
                   {tokenSymbol && <Badge.App>{tokenSymbol}</Badge.App>}
                 </Title>
               }
               endContent={
                 <Button
                   mode="strong"
-                  onClick={this.handleAppBarLaunchAssignTokens}
+                  onClick={this.handleLaunchAssignTokensNoHolder}
                 >
                   Assign Tokens
                 </Button>
@@ -97,31 +118,50 @@ class App extends React.Component {
           </AppLayout.Header>
           <AppLayout.ScrollWrapper>
             <AppLayout.Content>
-              {tokenSettingsLoaded && holders.length > 0 ? (
+              {appStateReady && holders.length > 0 ? (
                 <Holders
                   holders={holders}
-                  onAssignTokens={this.handleLaunchAssignTokens}
+                  groupMode={groupMode}
+                  maxAccountTokens={maxAccountTokens}
+                  tokenAddress={tokenAddress}
                   tokenDecimalsBase={tokenDecimalsBase}
+                  tokenName={tokenName}
                   tokenSupply={tokenSupply}
+                  tokenSymbol={tokenSymbol}
+                  tokenTransfersEnabled={tokenTransfersEnabled}
                   userAccount={userAccount}
+                  onAssignTokens={this.handleLaunchAssignTokens}
+                  onRemoveTokens={this.handleLaunchRemoveTokens}
                 />
               ) : (
-                <EmptyState onActivate={this.handleLaunchAssignTokens} />
+                <EmptyState
+                  onActivate={this.handleLaunchAssignTokensNoHolder}
+                />
               )}
             </AppLayout.Content>
           </AppLayout.ScrollWrapper>
         </AppLayout>
         <SidePanel
-          title="Assign Tokens"
+          title={
+            assignTokensConfig.mode === 'assign'
+              ? 'Assign tokens'
+              : 'Remove tokens'
+          }
           opened={sidepanelOpened}
           onClose={this.handleSidepanelClose}
+          onTransitionEnd={this.handleSidepanelTransitionEnd}
         >
-          <AssignVotePanelContent
-            onAssignTokens={this.handleAssignTokens}
-            opened={sidepanelOpened}
-            tokenDecimalsBase={tokenDecimalsBase}
-            {...assignTokensConfig}
-          />
+          {appStateReady && (
+            <AssignVotePanelContent
+              opened={sidepanelOpened}
+              tokenDecimals={numData.tokenDecimals}
+              tokenDecimalsBase={tokenDecimalsBase}
+              onUpdateTokens={this.handleUpdateTokens}
+              getHolderBalance={this.getHolderBalance}
+              maxAccountTokens={maxAccountTokens}
+              {...assignTokensConfig}
+            />
+          )}
         </SidePanel>
       </AragonApp>
     )
@@ -131,9 +171,11 @@ class App extends React.Component {
 const Title = styled.span`
   display: flex;
   align-items: center;
-  & > span:first-child {
-    margin-right: 10px;
-  }
+`
+
+const TitleLabel = styled.span`
+  margin-right: 10px;
+  ${font({ size: 'xxlarge' })};
 `
 
 export default observe(
@@ -141,15 +183,43 @@ export default observe(
   // and calculate tokenDecimalsBase.
   observable =>
     observable.map(state => {
-      const { tokenSupply, holders, tokenDecimals } = state
+      const appStateReady = hasLoadedTokenSettings(state)
+      if (!appStateReady) {
+        return {
+          ...state,
+          appStateReady,
+        }
+      }
+
+      const {
+        holders,
+        maxAccountTokens,
+        tokenDecimals,
+        tokenSupply,
+        tokenTransfersEnabled,
+      } = state
+
       const tokenDecimalsBase = new BN(10).pow(new BN(tokenDecimals))
+
       return {
         ...state,
-        tokenSupply: new BN(tokenSupply),
+        appStateReady,
         tokenDecimalsBase,
+        // Note that numbers in `numData` are not safe for accurate computations
+        // (but are useful for making divisions easier)
+        numData: {
+          tokenDecimals: parseInt(tokenDecimals, 10),
+          tokenSupply: parseInt(tokenSupply, 10),
+        },
         holders: holders
-          .map(holder => ({ ...holder, balance: new BN(holder.balance) }))
-          .sort((a, b) => b.balance.cmp(a.balance)),
+          ? holders
+              .map(holder => ({ ...holder, balance: new BN(holder.balance) }))
+              .sort((a, b) => b.balance.cmp(a.balance))
+          : [],
+        tokenDecimals: new BN(tokenDecimals),
+        tokenSupply: new BN(tokenSupply),
+        maxAccountTokens: new BN(maxAccountTokens),
+        groupMode: tokenTransfersEnabled && maxAccountTokens === '1',
       }
     }),
   {}
