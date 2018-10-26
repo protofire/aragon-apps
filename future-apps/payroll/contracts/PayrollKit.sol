@@ -90,7 +90,7 @@ contract PayrollKit is KitBase {
       PPFMock priceFeed = new PPFMock();
 
       MiniMeToken denominationToken = newToken("USD Dolar", "USD");
-      MiniMeToken token = newToken("DevToken", "XDT");
+      // MiniMeToken token = newToken("DevToken", "XDT");
 
       acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
@@ -110,7 +110,16 @@ contract PayrollKit is KitBase {
       vault.initialize();
       finance.initialize(vault, financePeriodDuration);
       payroll.initialize(finance, denominationToken, priceFeed, rateExpiryTime);
-      deployTokens(dao, finance, acl, root);
+
+      // deployTokens(dao, finance, acl, root);
+      MiniMeToken token1 = deployAndDepositToken(dao, finance, acl, root, "Token 1", "TK1");
+      payroll.addAllowedToken(token1);
+
+      MiniMeToken token2 = deployAndDepositToken(dao, finance, acl, root, "Token 2", "TK2");
+      payroll.addAllowedToken(token2);
+
+      MiniMeToken token3 = deployAndDepositToken(dao, finance, acl, root, "Token 3", "TK3");
+      payroll.addAllowedToken(token3);
 
       address(finance).send(10 ether);
 
@@ -171,8 +180,9 @@ contract PayrollKit is KitBase {
     }
 
     function deployTokens(Kernel dao, Finance finance, ACL acl, address root) internal {
-      deployAndDepositToken(dao, finance, acl, root, "Token 1", "TK1");
+      MiniMeToken token1 = deployAndDepositToken(dao, finance, acl, root, "Token 1", "TK1");
       deployAndDepositToken(dao, finance, acl, root, "Token 2", "TK2");
+      deployAndDepositToken(dao, finance, acl, root, "Token 3", "TK3");
     }
 
     function deployAndDepositToken(
@@ -182,7 +192,7 @@ contract PayrollKit is KitBase {
         address root,
         string name,
         string symbol
-    ) internal {
+    ) internal returns (MiniMeToken) {
         TokenManager tokenManager = newTokenManager(dao, acl, root);
         MiniMeToken token = newToken(name, symbol);
         token.changeController(tokenManager);
@@ -190,7 +200,14 @@ contract PayrollKit is KitBase {
         tokenManager.mint(this, amount);
         token.approve(finance, amount);
         finance.deposit(token, amount, "Initial deployment");
+
+        return token;
     }
+
+    function addAllowedToken(MiniMeToken token) internal {
+
+    }
+
 
     function newToken(string name, string symbol) internal returns (MiniMeToken token) {
         token = tokenFactory.createCloneToken(MiniMeToken(0), 0, name, 18, symbol, true);
