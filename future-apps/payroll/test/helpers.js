@@ -52,7 +52,7 @@ module.exports = (owner) => ({
     const CHANGE_PERIOD_ROLE = await financeBase.CHANGE_PERIOD_ROLE()
     const CHANGE_BUDGETS_ROLE = await financeBase.CHANGE_BUDGETS_ROLE()
     const EXECUTE_PAYMENTS_ROLE = await financeBase.EXECUTE_PAYMENTS_ROLE()
-    const DISABLE_PAYMENTS_ROLE = await financeBase.DISABLE_PAYMENTS_ROLE()
+    const MANAGE_PAYMENTS_ROLE = await financeBase.MANAGE_PAYMENTS_ROLE()
     const TRANSFER_ROLE = await vaultBase.TRANSFER_ROLE()
 
     const r = await daoFact.newDAO(owner)
@@ -69,7 +69,7 @@ module.exports = (owner) => ({
     await acl.createPermission(ANY_ENTITY, finance.address, CHANGE_PERIOD_ROLE, owner, { from: owner })
     await acl.createPermission(ANY_ENTITY, finance.address, CHANGE_BUDGETS_ROLE, owner, { from: owner })
     await acl.createPermission(ANY_ENTITY, finance.address, EXECUTE_PAYMENTS_ROLE, owner, { from: owner })
-    await acl.createPermission(ANY_ENTITY, finance.address, DISABLE_PAYMENTS_ROLE, owner, { from: owner })
+    await acl.createPermission(ANY_ENTITY, finance.address, MANAGE_PAYMENTS_ROLE, owner, { from: owner })
 
     const receipt1 = await dao.newAppInstance('0x1234', vaultBase.address, '0x', false, { from: owner })
     vault = getContract('Vault').at(getEvent(receipt1, 'NewAppProxy', 'proxy'))
