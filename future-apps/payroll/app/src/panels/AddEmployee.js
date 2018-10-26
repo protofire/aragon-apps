@@ -107,17 +107,14 @@ class AddEmployee extends React.PureComponent {
         name,
         startDate
       ).subscribe(employee => {
-          if (employee) {
-            console.info(`Created employee ${employee}`)
+        if (employee) {
+          // Reset form data
+          this.setState(AddEmployee.initialState)
 
-            // Reset form data
-            this.setState(AddEmployee.initialState)
-
-            // Close side panel
-            this.props.onClose()
-          }
+          // Close side panel
+          this.props.onClose()
         }
-      )
+      })
     }
   }
 
@@ -133,6 +130,14 @@ class AddEmployee extends React.PureComponent {
     if (opened) { // When side panel is shown
       this.focusFirstEmptyField()
     }
+  }
+
+  setEntitySearchRef = (el) => {
+    this.entitySearch = el
+  }
+
+  setSalaryInputRef = (el) => {
+    this.salaryInput = el
   }
 
   render () {
@@ -151,7 +156,7 @@ class AddEmployee extends React.PureComponent {
         >
           <Field label='Entity'>
             <Input.Entity
-              ref={el => this.entitySearch = el}
+              ref={this.setEntitySearchRef}
               key={entity && entity.domain}
               value={entity && entity.domain}
               onChange={this.handleEntityChange}
@@ -160,7 +165,7 @@ class AddEmployee extends React.PureComponent {
 
           <Field label='Salary'>
             <Input.Currency
-              innerRef={el => this.salaryInput = el}
+              innerRef={this.setSalaryInputRef}
               value={salary || ''}
               onChange={this.handleSalaryChange}
             />
@@ -177,7 +182,7 @@ class AddEmployee extends React.PureComponent {
           <Field label='Name'>
             <Input.Static>
               <span data-testid='entity-name'>
-                {entity && entity.name || ' '}
+                {entity ? entity.name : ' '}
               </span>
             </Input.Static>
           </Field>
@@ -185,7 +190,7 @@ class AddEmployee extends React.PureComponent {
           <Field label='Role'>
             <Input.Static>
               <span data-testid='entity-role'>
-                {entity && entity.role || ' '}
+                {entity ? entity.role : ' '}
               </span>
             </Input.Static>
           </Field>
@@ -193,7 +198,7 @@ class AddEmployee extends React.PureComponent {
           <Field label='Account Address'>
             <Input.Static>
               <span data-testid='entity-account-address'>
-                {entity && entity.accountAddress || ' '}
+                {entity ? entity.accountAddress : ' '}
               </span>
             </Input.Static>
           </Field>
