@@ -45,7 +45,7 @@ class Table extends React.Component {
     if (!data.length) {
       return (
         <Panel>
-          <p>{noDataMessage || 'No data'}</p>
+          <p>{noDataMessage || 'No data available'}</p>
         </Panel>
       )
     }
