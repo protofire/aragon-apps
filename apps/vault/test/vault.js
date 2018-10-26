@@ -9,11 +9,15 @@ const EVMScriptRegistryFactory = artifacts.require('EVMScriptRegistryFactory')
 const DAOFactory = artifacts.require('DAOFactory')
 const Kernel = artifacts.require('Kernel')
 const KernelProxy = artifacts.require('KernelProxy')
+
+const EtherTokenConstantMock = artifacts.require('EtherTokenConstantMock')
 const KernelDepositableMock = artifacts.require('KernelDepositableMock')
 
 const Vault = artifacts.require('Vault')
 
 const SimpleERC20 = artifacts.require('tokens/SimpleERC20')
+
+const DestinationMock = artifacts.require('DestinationMock')
 
 const NULL_ADDRESS = '0x00'
 
@@ -23,7 +27,6 @@ contract('Vault app', (accounts) => {
   let ETH, ANY_ENTITY, APP_MANAGER_ROLE, TRANSFER_ROLE
 
   const root = accounts[0]
-  const NO_DATA = '0x'
 
   before(async () => {
     const kernelBase = await Kernel.new(true) // petrify immediately
@@ -33,10 +36,12 @@ contract('Vault app', (accounts) => {
     vaultBase = await Vault.new()
 
     // Setup constants
-    ETH = await vaultBase.ETH()
     ANY_ENTITY = await aclBase.ANY_ENTITY()
     APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE()
     TRANSFER_ROLE = await vaultBase.TRANSFER_ROLE()
+
+    const ethConstant = await EtherTokenConstantMock.new()
+    ETH = await ethConstant.getETHConstant()
   })
 
   beforeEach(async () => {
@@ -49,7 +54,7 @@ contract('Vault app', (accounts) => {
     // vault
     vaultId = hash('vault.aragonpm.test')
 
-    const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address)
+    const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address, '0x', false)
     const vaultProxyAddress = getEvent(vaultReceipt, 'NewAppProxy', 'proxy')
     vault = Vault.at(vaultProxyAddress)
 
@@ -71,7 +76,7 @@ contract('Vault app', (accounts) => {
       const value = 1
 
       // Deposit without data param
-      await vault.deposit(ETH, accounts[0], value, { value })
+      await vault.deposit(ETH, value, { value: value, from: accounts[0] })
       assert.equal((await getBalance(vault.address)).toString(), value, `should hold ${value} wei`)
       assert.equal((await vault.balance(ETH)).toString(), value, `should return ${value} wei balance`)
 
@@ -96,26 +101,30 @@ contract('Vault app', (accounts) => {
       const testAccount = '0xbeef000000000000000000000000000000000000'
       const initialBalance = await getBalance(testAccount)
 
-      // Transfer with data param
-      await vault.transfer(ETH, testAccount, transferValue, NO_DATA)
+      // Transfer
+      await vault.transfer(ETH, testAccount, transferValue)
 
       assert.equal((await getBalance(testAccount)).toString(), initialBalance.add(transferValue).toString(), "should have sent eth")
       assert.equal((await getBalance(vault.address)).toString(), depositValue - transferValue, "should have remaining balance")
+    })
 
-      // Transfer without data param
-      /* Waiting for truffle to get overloading...
-      await vault.transfer(ETH, testAccount, transferValue)
+    it('fails transfering ETH if uses more than 2.3k gas', async () => {
+      const transferValue = 10
 
-      assert.equal((await getBalance(testAccount)).toString(), initialBalance.add(transferValue * 2).toString(), "should have sent eth")
-      assert.equal((await getBalance(vault.address)).toString(), depositValue - transferValue * 2, "should have remaining balance")
-      */
+      const destination = await DestinationMock.new()
+      await vault.sendTransaction( { value: transferValue })
+
+      // Transfer
+      return assertRevert(async () => {
+        await vault.transfer(ETH, destination.address, transferValue)
+      })
     })
 
     it('fails if depositing a different amount of ETH than sent', async () => {
       const value = 1
 
       return assertRevert(async () => {
-        await vault.deposit(ETH, accounts[0], value, { value: value * 2 })
+        await vault.deposit(ETH, value, { value: value * 2, from: accounts[0] })
       })
     })
   })
@@ -131,7 +140,7 @@ contract('Vault app', (accounts) => {
       await token.approve(vault.address, 10)
 
       // Deposit half without data param
-      await vault.deposit(token.address, accounts[0], 5)
+      await vault.deposit(token.address, 5, { from: accounts[0] })
 
       assert.equal(await token.balanceOf(vault.address), 5, "token accounting should be correct")
       assert.equal(await vault.balance(token.address), 5, "vault should know its balance")
@@ -149,17 +158,10 @@ contract('Vault app', (accounts) => {
       const tokenReceiver = accounts[2]
       await token.transfer(vault.address, 10)
 
-      // Transfer half with data param
-      await vault.transfer(token.address, tokenReceiver, 5, '')
-
-      assert.equal(await token.balanceOf(tokenReceiver), 5, "receiver should have correct token balance")
-
-      // Transfer half without data param
-      /* Waiting for truffle to get overloading...
+      // Transfer half
       await vault.transfer(token.address, tokenReceiver, 5)
 
-      assert.equal(await token.balanceOf(tokenReceiver), 10, "receiver should have correct token balance")
-      */
+      assert.equal(await token.balanceOf(tokenReceiver), 5, "receiver should have correct token balance")
     })
 
     it('fails if not sufficient token balance available', async () => {
@@ -167,7 +169,7 @@ contract('Vault app', (accounts) => {
       await token.approve(vault.address, approvedAmount)
 
       return assertRevert(async () => {
-          await vault.deposit(token.address, accounts[0], approvedAmount * 2)
+        await vault.deposit(token.address, approvedAmount * 2, { from: accounts[0] })
       })
     })
   })
@@ -193,7 +195,7 @@ contract('Vault app', (accounts) => {
         await acl.createPermission(root, kernel.address, APP_MANAGER_ROLE, root, { from: root })
 
         // Create a new vault and set that vault as the default vault in the kernel
-        const defaultVaultReceipt = await kernel.newAppInstance(vaultId, vaultBase.address, '', true)
+        const defaultVaultReceipt = await kernel.newAppInstance(vaultId, vaultBase.address, '0x', true)
         const defaultVaultAddress = getEvent(defaultVaultReceipt, 'NewAppProxy', 'proxy')
         defaultVault = Vault.at(defaultVaultAddress)
         await defaultVault.initialize()

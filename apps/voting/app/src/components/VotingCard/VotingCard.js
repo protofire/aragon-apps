@@ -2,7 +2,7 @@ import React from 'react'
 import styled from 'styled-components'
 import color from 'onecolor'
 import { format } from 'date-fns'
-import { Countdown, Text, Button, Badge, theme } from '@aragon/ui'
+import { Countdown, Text, Button, theme } from '@aragon/ui'
 import VotingOptions from './VotingOptions'
 
 class VotingCard extends React.Component {
@@ -19,19 +19,21 @@ class VotingCard extends React.Component {
       options,
       endDate,
       question,
-      opened,
-      totalVoters,
+      open,
+      votingPower,
       status,
       id,
     } = this.props
     return (
       <Main>
         <Header>
-          {opened ? (
+          {open ? (
             <Countdown end={endDate} />
           ) : (
-            <PastDate dateTime={format(endDate, 'yyyy-MM-dd[T]HH:mm:ss')}>
-              {format(endDate, 'dd MMM yyyy HH:mm')}
+            <PastDate
+              dateTime={format(endDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")}
+            >
+              {format(endDate, 'EEEEEE MMM yyyy HH:mm')}
             </PastDate>
           )}
 
@@ -43,7 +45,7 @@ class VotingCard extends React.Component {
               <Text color={theme.textTertiary}>#{id} </Text>
               <span>{question}</span>
             </Question>
-            <VotingOptions totalVoters={totalVoters} options={options} />
+            <VotingOptions options={options} votingPower={votingPower} />
           </Content>
           <Footer>
             <SecondaryButton onClick={this.handleOpen}>
@@ -104,13 +106,6 @@ const Question = styled.h1`
 const PastDate = styled.time`
   font-size: 13px;
   color: #98a0a2;
-`
-
-const More = styled.div`
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
 `
 
 const Footer = styled.div`
