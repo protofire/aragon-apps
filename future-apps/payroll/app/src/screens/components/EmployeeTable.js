@@ -14,7 +14,7 @@ class EmployeeTable extends React.Component {
         columns={columns}
         data={employees}
         sortable={sortable}
-        noDataMessage='No employee found'
+        noDataMessage='No employees found'
       />
     )
   }
