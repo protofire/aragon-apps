@@ -13,7 +13,6 @@ import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/ppf-contracts/contracts/IFeed.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
-import "@aragon/apps-shared-minime/contracts/ITokenController.sol";
 
 import "./Payroll.sol";
 
@@ -25,7 +24,7 @@ contract PPFMock is IFeed {
   }
 }
 
-contract KitBase is APMNamehash, EVMScriptRegistryConstants, ITokenController {
+contract KitBase is APMNamehash, EVMScriptRegistryConstants {
     ENS public ens;
     DAOFactory public fac;
 
@@ -90,60 +89,39 @@ contract PayrollKit is KitBase {
 
       PPFMock priceFeed = new PPFMock();
 
-      MiniMeToken denominationToken = tokenFactory.createCloneToken(MiniMeToken(0), 0, "USD Dolar", 18, "USD", true);
-      MiniMeToken token = tokenFactory.createCloneToken(MiniMeToken(address(0)), 0, "DevToken", 18, "XDT", true);
+      MiniMeToken denominationToken = newToken("USD Dolar", "USD");
+      MiniMeToken token = newToken("DevToken", "XDT");
 
       acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
       Vault vault;
       Finance finance;
-      TokenManager tokenManager;
-      (vault, finance, payroll, tokenManager) = deployApps(dao);
+      (vault, finance, payroll) = deployApps(dao);
 
-      // token manager initialization
-      token.changeController(tokenManager); // token manager has to create tokens
+      // Setup the permissions for the Finance App
+      setFinancePermissions(acl, finance, payroll, root);
 
-      // permissions
+      // Setup the permissions for the vault
       setVaultPermissions(acl, vault, finance, root);
+
+      // Payroll permissions
+      setPayrollPermissions(acl, payroll, root);
 
       vault.initialize();
       finance.initialize(vault, financePeriodDuration);
       payroll.initialize(finance, denominationToken, priceFeed, rateExpiryTime);
-      tokenManager.initialize(token, true, 0);
+      deployTokens(dao, finance, acl, root);
 
-      acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
+      address(finance).send(10 ether);
 
-      tokenManager.mint(this, amount);
-      token.approve(finance, amount);
-      finance.deposit(token, amount, "Initial deployment");
-
-      deployTokens(finance);
-
-      // Payroll permissions
-      acl.createPermission(employer, payroll, payroll.ADD_EMPLOYEE_ROLE(), root);
-      acl.createPermission(employer, payroll, payroll.TERMINATE_EMPLOYEE_ROLE(), root);
-      acl.createPermission(employer, payroll, payroll.ALLOWED_TOKENS_MANAGER_ROLE(), root);
-      acl.createPermission(employer, payroll, payroll.SET_EMPLOYEE_SALARY_ROLE(), root);
-      acl.createPermission(employer, payroll, payroll.ADD_ACCRUED_VALUE_ROLE(), root);
-      acl.createPermission(root, payroll, payroll.CHANGE_PRICE_FEED_ROLE(), root);
-      acl.createPermission(root, payroll, payroll.MODIFY_RATE_EXPIRY_ROLE(), root);
-
-      // Finance permissions
-      acl.createPermission(payroll, finance, finance.CREATE_PAYMENTS_ROLE(), root);
-
-      // setTokenManagerPermissions(acl, tokenManager, root);
-
-      // EVMScriptRegistry permissions
-      // EVMScriptRegistry reg = EVMScriptRegistry(dao.getApp(dao.APP_ADDR_NAMESPACE(), EVMSCRIPT_REGISTRY_APP_ID));
-      // acl.createBurnedPermission(reg, reg.REGISTRY_ADD_EXECUTOR_ROLE());
-      // acl.createBurnedPermission(reg, reg.REGISTRY_MANAGER_ROLE());
+      addEmployees(payroll, root);
 
       cleanupDAOPermissions(dao, acl, root);
 
       emit DeployInstance(dao);
     }
 
-    function deployApps(Kernel dao) internal returns (Vault, Finance, Payroll, TokenManager) {
+    function deployApps(Kernel dao) internal returns (Vault, Finance, Payroll) {
       bytes32 vaultAppId = apmNamehash("vault");
       bytes32 financeAppId = apmNamehash("finance");
       bytes32 payrollAppId = apmNamehash("payroll");
@@ -152,14 +130,12 @@ contract PayrollKit is KitBase {
       Vault vault = Vault(dao.newAppInstance(vaultAppId, latestVersionAppBase(vaultAppId)));
       Finance finance = Finance(dao.newAppInstance(financeAppId, latestVersionAppBase(financeAppId)));
       Payroll payroll = Payroll(dao.newAppInstance(payrollAppId, latestVersionAppBase(payrollAppId)));
-      TokenManager tokenManager = TokenManager(dao.newAppInstance(tokenManagerAppId, latestVersionAppBase(tokenManagerAppId)));
 
       emit InstalledApp(vault, vaultAppId);
       emit InstalledApp(finance, financeAppId);
       emit InstalledApp(payroll, payrollAppId);
-      emit InstalledApp(tokenManager, tokenManagerAppId);
 
-      return (vault, finance, payroll, tokenManager);
+      return (vault, finance, payroll);
     }
 
     function setVaultPermissions(ACL acl, Vault vault, Finance finance, address root) internal {
@@ -169,42 +145,75 @@ contract PayrollKit is KitBase {
       acl.setPermissionManager(root, vault, vaultTransferRole); // set root as the final manager for the role
     }
 
+    function setFinancePermissions(ACL acl, Finance finance, Payroll payroll, address root) internal {
+      acl.createPermission(payroll, finance, finance.CREATE_PAYMENTS_ROLE(), root);
+
+      // acl.createPermission(root, finance, finance.CHANGE_PERIOD_ROLE(), root);
+      // acl.createPermission(root, finance, finance.CHANGE_BUDGETS_ROLE(), root);
+      // acl.createPermission(root, finance, finance.EXECUTE_PAYMENTS_ROLE(), root);
+      // acl.createPermission(root, finance, finance.MANAGE_PAYMENTS_ROLE(), root);
+    }
+
+    function setPayrollPermissions(ACL acl, Payroll payroll, address root) internal {
+      acl.createPermission(this, payroll, payroll.ADD_EMPLOYEE_ROLE(), this);
+      acl.grantPermission(root, payroll, payroll.ADD_EMPLOYEE_ROLE());
+      acl.setPermissionManager(root, payroll, payroll.ADD_EMPLOYEE_ROLE());
+
+      acl.createPermission(this, payroll, payroll.ALLOWED_TOKENS_MANAGER_ROLE(), this);
+      acl.grantPermission(root, payroll, payroll.ALLOWED_TOKENS_MANAGER_ROLE());
+      acl.setPermissionManager(root, payroll, payroll.ALLOWED_TOKENS_MANAGER_ROLE());
+
+      // acl.createPermission(employer, payroll, payroll.TERMINATE_EMPLOYEE_ROLE(), root);
+      // acl.createPermission(employer, payroll, payroll.SET_EMPLOYEE_SALARY_ROLE(), root);
+      // acl.createPermission(employer, payroll, payroll.ADD_ACCRUED_VALUE_ROLE(), root);
+      // acl.createPermission(employer, payroll, payroll.CHANGE_PRICE_FEED_ROLE(), root);
+      // acl.createPermission(root, payroll, payroll.MODIFY_RATE_EXPIRY_ROLE(), root);
+    }
+
+    function deployTokens(Kernel dao, Finance finance, ACL acl, address root) internal {
+      deployAndDepositToken(dao, finance, acl, root, "Token 1", "TK1");
+      deployAndDepositToken(dao, finance, acl, root, "Token 2", "TK2");
+    }
+
+    function deployAndDepositToken(
+        Kernel dao,
+        Finance finance,
+        ACL acl,
+        address root,
+        string name,
+        string symbol
+    ) internal {
+        TokenManager tokenManager = newTokenManager(dao, acl, root);
+        MiniMeToken token = newToken(name, symbol);
+        token.changeController(tokenManager);
+        tokenManager.initialize(token, true, 0);
+        tokenManager.mint(this, amount);
+        token.approve(finance, amount);
+        finance.deposit(token, amount, "Initial deployment");
+    }
+
+    function newToken(string name, string symbol) internal returns (MiniMeToken token) {
+        token = tokenFactory.createCloneToken(MiniMeToken(0), 0, name, 18, symbol, true);
+    }
+
+    function newTokenManager(Kernel dao, ACL acl, address root) internal returns (TokenManager tokenManager) {
+        bytes32 tokenManagerAppId = apmNamehash("token-manager");
+        tokenManager = TokenManager(dao.newAppInstance(tokenManagerAppId, latestVersionAppBase(tokenManagerAppId)));
+        emit InstalledApp(tokenManager, tokenManagerAppId);
+        setTokenManagerPermissions(acl, tokenManager, root);
+    }
+
     function setTokenManagerPermissions(ACL acl, TokenManager tokenManager, address root) internal {
-        // token manager permissions
-        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.MINT_ROLE(), root);
-        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.ISSUE_ROLE(), root);
-        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.ASSIGN_ROLE(), root);
-        acl.createPermission(ANY_ENTITY, tokenManager, tokenManager.REVOKE_VESTINGS_ROLE(), root);
+      acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), root);
+      // acl.createPermission(root, tokenManager, tokenManager.ISSUE_ROLE(), root);
+      // acl.createPermission(root, tokenManager, tokenManager.ASSIGN_ROLE(), root);
+      // acl.createPermission(root, tokenManager, tokenManager.REVOKE_VESTINGS_ROLE(), root);
+      // acl.createPermission(root, tokenManager, tokenManager.BURN_ROLE(), root);
     }
 
-    function deployTokens(Finance finance) internal {
-      MiniMeToken token1 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 1", 18, "TK1", true);
-      // MiniMeToken token2 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 2", 18, "TK2", true);
-      // MiniMeToken token3 = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Token 3", 18, "TK3", true);
-
-      token1.changeController(this);
-      token1.generateTokens(this, 10000000);
-      // // token2.generateTokens(this, amount);
-      // // token3.generateTokens(this, amount);
-
-      token1.approve(finance, 10000000);
-      // // token2.approve(finance, amount);
-      // // token3.approve(finance, amount);
-
-      finance.deposit(token1, 10000000, "Initial deployment");
-      // finance.deposit(token2, amount, "Initial deployment");
-      // finance.deposit(token3, amount, "Initial deployment");
-    }
-
-    function onApprove(address, address, uint) public returns (bool) {
-        return true;
-    }
-
-    function onTransfer(address _from, address _to, uint _amount) public returns (bool) {
-        return true;
-    }
-
-    function proxyPayment(address) public payable returns (bool) {
-        return false;
+    function addEmployees(Payroll payroll, address root) internal {
+        payroll.addEmployeeWithNameAndStartDate(address(0), 10, 'employee 1', uint64(now));
+        payroll.addEmployeeWithNameAndStartDate(this, 20, 'employee 2', uint64(now- 86400));
+        payroll.addEmployeeWithNameAndStartDate(root, 30, 'employee 3',  uint64(now - 172800));
     }
 }
