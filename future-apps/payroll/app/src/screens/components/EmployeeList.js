@@ -52,19 +52,28 @@ class EmployeeList extends React.Component {
     const { roleFilter, statusFilter } = this.state
 
     const filters = [
-      ...(roleFilter ? [roleFilter] : []),
-      ...(statusFilter ? [statusFilter] : [])
+      ...(roleFilter && roleFilter.filter ? [roleFilter.filter] : []),
+      ...(statusFilter && statusFilter.filter ? [statusFilter.filter] : [])
     ]
 
-    const roles = new Set(employees.map(e => e.role))
+    const roles = new Set(
+      employees.map(e => e.role)
+    )
 
     return (
       <Container>
         <Header>
           <Section.Title>Employees</Section.Title>
           <Filters>
-            <StatusFilter onChange={this.handleStateFilterChange} />
-            <RoleFilter roles={roles} onChange={this.handleRoleFilterChange} />
+            <StatusFilter
+              active={statusFilter}
+              onChange={this.handleStateFilterChange}
+            />
+            <RoleFilter
+              active={roleFilter}
+              onChange={this.handleRoleFilterChange}
+              roles={roles}
+            />
           </Filters>
         </Header>
         <EmployeeTable

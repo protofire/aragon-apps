@@ -17,6 +17,7 @@ class Table extends React.Component {
   shouldComponentUpdate (nextProps, nextState) {
     return (nextProps.data.sortable !== this.props.sortable)
       || (nextProps.data.length !== this.props.data.length)
+      || (nextProps.filters.length !== this.props.filters.length)
       || (nextState.sortColumnIndex !== this.state.sortColumnIndex)
       || (nextState.sortDirection !== this.state.sortDirection)
   }
@@ -42,7 +43,7 @@ class Table extends React.Component {
     const { columns, data, filters, onClearFilters, sortable, noDataMessage } = this.props
     const { sortColumnIndex, sortDirection } = this.state
 
-    const filteredData = data.filter(i => filters.every(f => f(i)))
+    const filteredData = data.filter(i => filters.every(f => !f || f(i)))
 
     if (!filteredData.length) {
       return (
@@ -51,7 +52,7 @@ class Table extends React.Component {
             {noDataMessage || 'No data available'}
           </Text.Paragraph>
 
-          {filters.length && (
+          {filteredData.length === 0 && filters.length > 0 && (
             <Button mode='text' size='small' onClick={onClearFilters}>
               Clear filters
             </Button>

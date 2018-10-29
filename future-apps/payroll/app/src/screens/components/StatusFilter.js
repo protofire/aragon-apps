@@ -4,49 +4,36 @@ import { DropDown } from '@aragon/ui'
 
 import InlineField from '../../components/Field/InlineField'
 
-class StatusFilter extends React.Component {
-  state = {
-    activeFilter: 0,
-    filterValues: [
-      ['All', null],
-      ['Active', e => !e.terminated],
-      ['Inactive', e => e.terminated],
-    ]
-  }
+const options = [
+  { label: 'All', filter: null },
+  { label: 'Active', filter: employee => !employee.terminated },
+  { label: 'Inactive', filter: employee => employee.terminated }
+]
 
-  shouldComponentUpdate (nextProps, { activeFilter: nextActive }) {
-    return nextActive !== this.state.activeFilter
-  }
+const StatusFilter = ({ active, onChange }) => {
+  const activeIndex = active &&
+    options.indexOf(options.find(f => f.label === active.label))
 
-  render () {
-    const { onChange } = this.props
-    const { activeFilter } = this.state
-
-    const filterValues = [
-      ['All', null],
-      ['Active', e => !e.terminated],
-      ['Inactive', e => e.terminated],
-    ]
-
-    return (
-      <InlineField label='Status:'>
-        <DropDown
-          items={filterValues.map(([label]) => label)}
-          active={activeFilter}
-          onChange={index => {
-            this.setState({ activeFilter: index }, () => {
-              if (typeof onChange === 'function') {
-                onChange(filterValues[index][1])
-              }
-            })
-          }}
-        />
-      </InlineField>
-    )
-  }
+  return (
+    <InlineField label='Status:'>
+      <DropDown
+        items={options.map(opt => opt.label)}
+        active={activeIndex || 0}
+        onChange={index => {
+          if (typeof onChange === 'function') {
+            onChange(options[index])
+          }
+        }}
+      />
+    </InlineField>
+  )
 }
 
 StatusFilter.propTypes = {
+  active: PropTypes.shape({
+    label: PropTypes.string.isRequired,
+    filter: PropTypes.func
+  }),
   onChange: PropTypes.func
 }
 
