@@ -8,9 +8,22 @@ export function sort (items, sortValue, direction) {
     return items
   }
 
-  const values = items.map((item, index) => [index, sortValue(item)])
+  // USe memoization to avoid calculate values more than once
+  const values = new WeakMap()
 
-  values.sort(([, a], [, b]) => {
+  const getValue = (item) => {
+    if (!values.has(item)) {
+      values.set(item, sortValue(item))
+    }
+
+    return values.get(item)
+  }
+
+  // Sort item in place to avoid copying the array
+  items.sort((item1, item2) => {
+    const a = getValue(item1)
+    const b = getValue(item2)
+
     if (a === b) return 0
     if (a < b) return -direction
     if (a == null) return 1
@@ -19,5 +32,5 @@ export function sort (items, sortValue, direction) {
     return direction
   })
 
-  return values.map(([index]) => items[index])
+  return items
 }
