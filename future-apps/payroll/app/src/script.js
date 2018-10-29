@@ -1,10 +1,16 @@
 import Aragon from '@aragon/client'
+import tokenDecimalsAbi from './abi/token-decimals.json'
+import tokenSymbolAbi from './abi/token-symbol.json'
+
+const tokenAbi = [].concat(tokenDecimalsAbi, tokenSymbolAbi)
+
+const allowedTokens = new Map();
 
 import * as idm from './services/idm'
 
 const app = new Aragon()
 
-app.store(async (state, { event }) => {
+app.store(async (state, { event, ...eventData }) => {
   if (state === null) {
     const initialState = {
       employees: await getAllEmployees()
@@ -13,16 +19,27 @@ app.store(async (state, { event }) => {
     state = initialState
   }
 
-  if (event === 'AddEmployee') {
-    const employees = await getAllEmployees()
-
-    state = {
-      ...state,
-      employees
-    }
+  let nextState = {
+    ...state,
   }
 
-  return state
+  switch (event) {
+    case 'AddEmployee':
+      const employees = await getAllEmployees()
+
+      nextState = {
+        ...state,
+        employees
+      }
+      break
+    case 'AddAllowedToken':
+      nextState = await addAllowedToken(nextState, eventData)
+      break
+    default:
+      break
+  }
+
+  return nextState
 })
 
 function getEmployeeById (id) {
@@ -52,6 +69,45 @@ async function getAllEmployees () {
   }
 
   return Promise.all(employee)
+}
+
+async function addAllowedToken (state, { returnValues: { token: tokenAddress }}) {
+  if (!allowedTokens.has(tokenAddress)) {
+    const tokenContract = app.external(tokenAddress, tokenAbi)
+    const [decimals, symbol] = await Promise.all([
+      loadTokenDecimals(tokenContract),
+      loadTokenSymbol(tokenContract)
+    ])
+
+    allowedTokens.set(
+      tokenAddress,
+      {
+        tokenContract,
+        decimals,
+        symbol
+      }
+    )
+  }
+
+  return {
+    ...state,
+    allowedTokens: marshallAllowedTokens(allowedTokens)
+  }
+}
+
+function loadTokenDecimals(tokenContract) {
+  return tokenContract
+    .decimals()
+    .first()
+    .map(value => parseInt(value, 10))
+    .toPromise()
+}
+
+function loadTokenSymbol(tokenContract) {
+  return tokenContract
+    .symbol()
+    .first()
+    .toPromise()
 }
 
 function marshallCurrency (value) {
@@ -85,4 +141,13 @@ function marshallEmployeeData (data) {
   }
 
   return result
+}
+
+function marshallAllowedTokens(allowedTokens) {
+  let result = {};
+  for (const [address, {decimals, symbol}] of allowedTokens) {
+    result[address] = {decimals, symbol}
+  }
+
+  return result;
 }
