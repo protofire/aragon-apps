@@ -1,15 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { AragonApp, AppBar, Button, SidePanel, observe } from '@aragon/ui'
+import {
+  AppBar,
+  AppView,
+  AragonApp,
+  Button,
+  SidePanel,
+  observe,
+} from '@aragon/ui'
 import BN from 'bn.js'
 import EmptyState from './screens/EmptyState'
 import Votes from './screens/Votes'
 import tokenAbi from './abi/token-balanceOfAt.json'
 import VotePanelContent from './components/VotePanelContent'
 import NewVotePanelContent from './components/NewVotePanelContent'
-import AppLayout from './components/AppLayout'
 import { networkContextType } from './utils/provideNetwork'
 import { settingsContextType } from './utils/provideSettings'
+import { makeEtherscanBaseUrl } from './utils'
 import { hasLoadedVoteSettings } from './vote-settings'
 import { VOTE_YEA } from './vote-types'
 import {
@@ -24,10 +31,7 @@ class App extends React.Component {
   }
   static defaultProps = {
     appStateReady: false,
-    network: {
-      etherscanBaseUrl: 'https://rinkeby.etherscan.io',
-      name: 'rinkeby',
-    },
+    network: {},
     tokenSymbol: '',
     userAccount: '',
     votes: [],
@@ -37,11 +41,16 @@ class App extends React.Component {
     settings: settingsContextType,
   }
   getChildContext() {
+    const { network, pctBase, voteTime } = this.props
+
     return {
-      network: this.props.network,
+      network: {
+        etherscanBaseUrl: makeEtherscanBaseUrl(network.type),
+        type: network.type,
+      },
       settings: {
-        pctBase: this.props.pctBase,
-        voteTime: this.props.voteTime,
+        pctBase,
+        voteTime,
       },
     }
   }
@@ -179,8 +188,8 @@ class App extends React.Component {
 
     return (
       <AragonApp publicUrl="./aragon-ui/">
-        <AppLayout>
-          <AppLayout.Header>
+        <AppView
+          appBar={
             <AppBar
               title="Vote"
               endContent={
@@ -189,21 +198,14 @@ class App extends React.Component {
                 </Button>
               }
             />
-          </AppLayout.Header>
-          <AppLayout.ScrollWrapper>
-            <AppLayout.Content>
-              {appStateReady && votes.length > 0 ? (
-                <Votes
-                  votes={preparedVotes}
-                  onSelectVote={this.handleVoteOpen}
-                />
-              ) : (
-                <EmptyState onActivate={this.handleCreateVoteOpen} />
-              )}
-            </AppLayout.Content>
-          </AppLayout.ScrollWrapper>
-        </AppLayout>
-
+          }
+        >
+          {appStateReady && votes.length > 0 ? (
+            <Votes votes={preparedVotes} onSelectVote={this.handleVoteOpen} />
+          ) : (
+            <EmptyState onActivate={this.handleCreateVoteOpen} />
+          )}
+        </AppView>
         <SidePanel
           title={`Vote #${currentVoteId} (${
             currentVote && currentVote.data.open ? 'Open' : 'Closed'

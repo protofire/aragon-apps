@@ -7,7 +7,7 @@ import {
   TableCell,
   ContextMenu,
   ContextMenuItem,
-  SafeLink,
+  IdentityBadge,
   theme,
 } from '@aragon/ui'
 import provideNetwork from '../lib/provideNetwork'
@@ -45,12 +45,9 @@ class TransferRow extends React.Component {
     })
   }
   render() {
-    const {
-      network: { etherscanBaseUrl },
-      token,
-      transaction,
-    } = this.props
+    const { network, token, transaction, wideMode } = this.props
     const { showCopyTransferMessage } = this.state
+    const { etherscanBaseUrl } = network
     const {
       date,
       entity,
@@ -75,14 +72,11 @@ class TransferRow extends React.Component {
           </time>
         </NoWrapCell>
         <NoWrapCell>
-          <TextOverflow>
-            <SafeLink
-              href={`${etherscanBaseUrl}/address/${entity}`}
-              target="_blank"
-            >
-              {entity}
-            </SafeLink>
-          </TextOverflow>
+          <IdentityBadge
+            networkType={network.type}
+            entity={entity}
+            shorten={!wideMode}
+          />
         </NoWrapCell>
         <NoWrapCell title={reference} style={{ position: 'relative' }}>
           <TextOverflow style={{ position: 'absolute', left: '0', right: '0' }}>
@@ -96,16 +90,18 @@ class TransferRow extends React.Component {
         </NoWrapCell>
         <NoWrapCell>
           <ActionsWrapper>
-            <ContextMenu>
-              {/* <ContextMenuItem onClick={this.handleCopyTransferUrl}>
+            {etherscanBaseUrl && (
+              <ContextMenu>
+                {/* <ContextMenuItem onClick={this.handleCopyTransferUrl}>
                 <IconShare />
                 <ActionLabel>Copy Transfer URL</ActionLabel>
               </ContextMenuItem> */}
-              <ContextMenuItem onClick={this.handleViewTransaction}>
-                <IconTokens />
-                <ActionLabel>View Transaction</ActionLabel>
-              </ContextMenuItem>
-            </ContextMenu>
+                <ContextMenuItem onClick={this.handleViewTransaction}>
+                  <IconTokens />
+                  <ActionLabel>View Transaction</ActionLabel>
+                </ContextMenuItem>
+              </ContextMenu>
+            )}
             {showCopyTransferMessage && (
               <ConfirmMessageWrapper>
                 <ConfirmMessage onDone={this.handleConfirmMessageDone}>
