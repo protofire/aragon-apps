@@ -3,19 +3,21 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import BN from 'bn.js'
 import {
-  AragonApp,
   AppBar,
-  Button,
+  AppView,
+  AragonApp,
   Badge,
+  Button,
   SidePanel,
   font,
   observe,
 } from '@aragon/ui'
 import EmptyState from './screens/EmptyState'
 import Holders from './screens/Holders'
-import AppLayout from './components/AppLayout'
 import AssignVotePanelContent from './components/Panels/AssignVotePanelContent'
+import { networkContextType } from './provide-network'
 import { hasLoadedTokenSettings } from './token-settings'
+import { makeEtherscanBaseUrl } from './utils'
 import { addressesEqual } from './web3-utils'
 
 const initialAssignTokensConfig = {
@@ -30,12 +32,26 @@ class App extends React.Component {
   static defaultProps = {
     appStateReady: false,
     holders: [],
+    network: {},
     userAccount: '',
     groupMode: false,
   }
   state = {
     assignTokensConfig: initialAssignTokensConfig,
     sidepanelOpened: false,
+  }
+  static childContextTypes = {
+    network: networkContextType,
+  }
+  getChildContext() {
+    const { network } = this.props
+
+    return {
+      network: {
+        etherscanBaseUrl: makeEtherscanBaseUrl(network.type),
+        type: network.type,
+      },
+    }
   }
   getHolderBalance = address => {
     const { holders } = this.props
@@ -97,8 +113,8 @@ class App extends React.Component {
     const { assignTokensConfig, sidepanelOpened } = this.state
     return (
       <AragonApp publicUrl="./aragon-ui/">
-        <AppLayout>
-          <AppLayout.Header>
+        <AppView
+          appBar={
             <AppBar
               title={
                 <Title>
@@ -115,32 +131,27 @@ class App extends React.Component {
                 </Button>
               }
             />
-          </AppLayout.Header>
-          <AppLayout.ScrollWrapper>
-            <AppLayout.Content>
-              {appStateReady && holders.length > 0 ? (
-                <Holders
-                  holders={holders}
-                  groupMode={groupMode}
-                  maxAccountTokens={maxAccountTokens}
-                  tokenAddress={tokenAddress}
-                  tokenDecimalsBase={tokenDecimalsBase}
-                  tokenName={tokenName}
-                  tokenSupply={tokenSupply}
-                  tokenSymbol={tokenSymbol}
-                  tokenTransfersEnabled={tokenTransfersEnabled}
-                  userAccount={userAccount}
-                  onAssignTokens={this.handleLaunchAssignTokens}
-                  onRemoveTokens={this.handleLaunchRemoveTokens}
-                />
-              ) : (
-                <EmptyState
-                  onActivate={this.handleLaunchAssignTokensNoHolder}
-                />
-              )}
-            </AppLayout.Content>
-          </AppLayout.ScrollWrapper>
-        </AppLayout>
+          }
+        >
+          {appStateReady && holders.length > 0 ? (
+            <Holders
+              holders={holders}
+              groupMode={groupMode}
+              maxAccountTokens={maxAccountTokens}
+              tokenAddress={tokenAddress}
+              tokenDecimalsBase={tokenDecimalsBase}
+              tokenName={tokenName}
+              tokenSupply={tokenSupply}
+              tokenSymbol={tokenSymbol}
+              tokenTransfersEnabled={tokenTransfersEnabled}
+              userAccount={userAccount}
+              onAssignTokens={this.handleLaunchAssignTokens}
+              onRemoveTokens={this.handleLaunchRemoveTokens}
+            />
+          ) : (
+            <EmptyState onActivate={this.handleLaunchAssignTokensNoHolder} />
+          )}
+        </AppView>
         <SidePanel
           title={
             assignTokensConfig.mode === 'assign'

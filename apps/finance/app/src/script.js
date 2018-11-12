@@ -1,26 +1,24 @@
 import Aragon from '@aragon/client'
 import { of } from './rxjs'
 import { getTestTokenAddresses } from './testnet'
+import { ETHER_TOKEN_FAKE_ADDRESS, isTokenVerified } from './lib/token-utils'
 import { addressesEqual } from './lib/web3-utils'
-import tokenBalanceOfAbi from './abi/token-balanceof.json'
 import tokenDecimalsAbi from './abi/token-decimals.json'
+import tokenNameAbi from './abi/token-name.json'
 import tokenSymbolAbi from './abi/token-symbol.json'
 import vaultBalanceAbi from './abi/vault-balance.json'
+import vaultEventAbi from './abi/vault-events.json'
 
-const tokenAbi = [].concat(tokenBalanceOfAbi, tokenDecimalsAbi, tokenSymbolAbi)
+const tokenAbi = [].concat(tokenDecimalsAbi, tokenNameAbi, tokenSymbolAbi)
+const vaultAbi = [].concat(vaultBalanceAbi, vaultEventAbi)
 
 const INITIALIZATION_TRIGGER = Symbol('INITIALIZATION_TRIGGER')
+const TEST_TOKEN_ADDRESSES = []
 const tokenContracts = new Map() // Addr -> External contract
 const tokenDecimals = new Map() // External contract -> decimals
+const tokenName = new Map() // External contract -> name
 const tokenSymbols = new Map() // External contract -> symbol
 
-/**
- * app.call('ETH')
- *
- * Is how we should be getting the ETH token, but aragon-cli doesn't extract
- * public constants in contracts into the artifact :(
- */
-const ETH_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ETH_CONTRACT = Symbol('ETH_CONTRACT')
 
 const app = new Aragon()
@@ -59,7 +57,7 @@ retryEvery(retry => {
     .call('vault')
     .first()
     .subscribe(
-      vaultAddress => initialize(vaultAddress, ETH_ADDRESS),
+      vaultAddress => initialize(vaultAddress, ETHER_TOKEN_FAKE_ADDRESS),
       err => {
         console.error(
           'Could not start background script execution due to the contract not loading the token:',
@@ -71,14 +69,22 @@ retryEvery(retry => {
 })
 
 async function initialize(vaultAddress, ethAddress) {
-  const vaultContract = app.external(vaultAddress, vaultBalanceAbi)
+  const vaultContract = app.external(vaultAddress, vaultAbi)
+
+  const network = await app
+    .network()
+    .take(1)
+    .toPromise()
+  TEST_TOKEN_ADDRESSES.push(...getTestTokenAddresses(network.type))
 
   // Set up ETH placeholders
   tokenContracts.set(ethAddress, ETH_CONTRACT)
   tokenDecimals.set(ETH_CONTRACT, '18')
+  tokenName.set(ETH_CONTRACT, 'Ether')
   tokenSymbols.set(ETH_CONTRACT, 'ETH')
 
   return createStore({
+    network,
     ethToken: {
       address: ethAddress,
     },
@@ -103,12 +109,16 @@ function createStore(settings) {
         nextState = await initializeState(nextState, settings)
       } else if (addressesEqual(eventAddress, vault.address)) {
         // Vault event
-        // Note: it looks like vault events don't have a defined `event.event` or anything in the
-        // `event.returnValues`... so let's just refetch its ETH balance.
         nextState = await vaultLoadBalance(nextState, event, settings)
       } else {
         // Finance event
         switch (eventName) {
+          case 'NewPeriod':
+            // A new period is always started as part of the Finance app's initialization,
+            // so this is just a handy way to get information about the app we're running
+            // (e.g. its own address)
+            nextState.proxyAddress = eventAddress
+            break
           case 'NewTransaction':
             nextState = await newTransaction(nextState, event, settings)
             break
@@ -224,17 +234,22 @@ function updateTransactions({ transactions = [] }, transactionDetails) {
 }
 
 async function newBalanceEntry(tokenContract, tokenAddress, settings) {
-  const [balance, decimals, symbol] = await Promise.all([
+  const [balance, decimals, name, symbol] = await Promise.all([
     loadTokenBalance(tokenAddress, settings),
     loadTokenDecimals(tokenContract),
+    loadTokenName(tokenContract),
     loadTokenSymbol(tokenContract),
   ])
 
   return {
     decimals,
+    name,
     symbol,
     address: tokenAddress,
     amount: balance,
+    verified:
+      isTokenVerified(tokenAddress, settings.network.type) ||
+      addressesEqual(tokenAddress, settings.ethToken.address),
   }
 }
 
@@ -262,10 +277,38 @@ function loadTokenDecimals(tokenContract) {
       tokenContract
         .decimals()
         .first()
-        .subscribe(decimals => {
-          tokenDecimals.set(tokenContract, decimals)
-          resolve(decimals)
-        }, reject)
+        .subscribe(
+          decimals => {
+            tokenDecimals.set(tokenContract, decimals)
+            resolve(decimals)
+          },
+          () => {
+            // Decimals is optional
+            resolve('0')
+          }
+        )
+    }
+  })
+}
+
+function loadTokenName(tokenContract) {
+  return new Promise((resolve, reject) => {
+    if (tokenName.has(tokenContract)) {
+      resolve(tokenName.get(tokenContract))
+    } else {
+      tokenContract
+        .name()
+        .first()
+        .subscribe(
+          name => {
+            tokenName.set(tokenContract, name)
+            resolve(name)
+          },
+          () => {
+            // Name is optional
+            resolve('')
+          }
+        )
     }
   })
 }
@@ -278,10 +321,16 @@ function loadTokenSymbol(tokenContract) {
       tokenContract
         .symbol()
         .first()
-        .subscribe(symbol => {
-          tokenSymbols.set(tokenContract, symbol)
-          resolve(symbol)
-        }, reject)
+        .subscribe(
+          symbol => {
+            tokenSymbols.set(tokenContract, symbol)
+            resolve(symbol)
+          },
+          () => {
+            // Symbol is optional
+            resolve('')
+          }
+        )
     }
   })
 }
@@ -337,7 +386,7 @@ function loadTestnetState(nextState, settings) {
 
 async function loadTestnetTokenBalances(nextState, settings) {
   let reducedState = nextState
-  for (const tokenAddress of getTestTokenAddresses()) {
+  for (const tokenAddress of TEST_TOKEN_ADDRESSES) {
     reducedState = {
       ...reducedState,
       balances: await updateBalances(reducedState, tokenAddress, settings),

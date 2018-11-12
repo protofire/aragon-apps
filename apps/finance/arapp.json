@@ -6,7 +6,7 @@
       "network": "rpc"
     },
     "rinkeby": {
-      "registry": "",
+      "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D",
       "appName": "finance.aragonpm.eth",
       "network": "rinkeby"
     },
@@ -29,7 +29,7 @@
   "dependencies": [
     {
       "appName": "vault.aragonpm.eth",
-      "version": "^1.0.0",
+      "version": "^4.0.0",
       "initParam": "_vault",
       "state": "vault",
       "requiredPermissions": [
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "name": "Disable payments",
+      "name": "Manage payments",
       "id": "MANAGE_PAYMENTS_ROLE",
       "params": [
         "Payment ID",
