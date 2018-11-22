@@ -15,6 +15,10 @@ class AvailableSalary extends React.PureComponent {
   }
 
   state = {
+    denominationToken: {
+      symbol: '',
+      decimals: 0
+    },
     data: []
   }
 
@@ -25,26 +29,36 @@ class AvailableSalary extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.accountAddress && this.props.employees != prevProps.employees) {
-      const employee = this.getEmployee(this.props.accountAddress)
-      const { totalTransferred, availableBalance } = this.props
+    if (
+      (this.props.accountAddress != prevProps.accountAddress) ||
+      (this.props.payments && prevProps.payments && this.props.payments.length != prevProps.payments.length)
+    ) {
+      const { payments, accountAddress, denominationToken } = this.props
+
+      const employee = this.getEmployee(accountAddress)
       const { lastPayroll, salary, accruedValue } = employee
-      const currentState = { data: [{ lastPayroll, salary, totalTransferred, availableBalance: accruedValue }] }
-      this.setState(currentState);
+
+      const init = 0
+      const reducer = (acc, payment) => acc + Number(payment.exchangeRate.amount)
+      const totalTransferred = payments.reduce(reducer, init)
+
+      const data = [{ lastPayroll, salary, totalTransferred , availableBalance: accruedValue }]
+
+      this.setState({ data })
+      this.setState({ denominationToken })
     }
   }
 
   render () {
-    const { denominationToken } = this.props
+    const { data, denominationToken } = this.state
     const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
-    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals)
-
+    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, 0)
     return (
       <Container>
         <Header>
           <Section.Title>Available Salary</Section.Title>
         </Header>
-        <AvailableSalaryTable data={this.state.data} formatSalary={formatSalary} formatCurrency={customFormatCurrency}/>
+        <AvailableSalaryTable data={data} formatSalary={formatSalary} formatCurrency={customFormatCurrency}/>
       </Container>
     )
   }
@@ -72,13 +86,15 @@ function mapStateToProps ({
   employees = [],
   accountAddress = [],
   denominationToken = [],
-  salaryAllocation = []
+  salaryAllocation = [],
+  payments = []
 }) {
   return {
     employees,
     accountAddress,
     denominationToken,
-    salaryAllocation
+    salaryAllocation,
+    payments
   }
 }
 
