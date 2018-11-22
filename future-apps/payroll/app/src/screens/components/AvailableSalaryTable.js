@@ -4,43 +4,13 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import Table from '../../components/Table'
 import { salaryType } from '../../types'
-import { formatCurrency, formatDate, formatTokenAmount } from '../../utils/formatting'
+import { formatDate, formatTokenAmount } from '../../utils/formatting'
 
 import { Button, theme } from '@aragon/ui'
 import Timer from '../../components/Timer'
 
-const Amount = styled.span`
-  font-weight: 600;
-  color: ${theme.positive}
-`
-
-const CellStyle = {
-  fontSize: '20px'
-}
-
-const partialAmount = amount => {
-  return {
-    amount,
-    isIncoming: true,
-    displaySign: true
-  }
-};
-
-const AvailableSalaryTable = (props) => (
-  <Table
-    noDataMessage='No available salary found'
-    sortable={false}
-    {...props}
-  />
-)
-
-AvailableSalaryTable.propTypes = {
-  ...Table.propTypes,
-  data: PropTypes.arrayOf(salaryType).isRequired
-}
-
-AvailableSalaryTable.defaultProps = {
-  columns: [
+const initializeColumns = (data, formatCurrency, formatSalary) => {
+  return [
     {
       name: 'last-payroll',
       title: 'Time since last salary',
@@ -78,12 +48,46 @@ AvailableSalaryTable.defaultProps = {
       name: 'your-yearly-salary',
       title: 'Your yearly salary',
       value: data => data.salary,
-      formatter: formatCurrency,
+      formatter: formatSalary,
       cellProps: {
         style: CellStyle
       }
     }
   ]
+}
+
+const Amount = styled.span`
+  font-weight: 600;
+  color: ${theme.positive}
+`
+
+const CellStyle = {
+  fontSize: '20px'
+}
+
+const partialAmount = amount => {
+  return {
+    amount,
+    isIncoming: true,
+    displaySign: true
+  }
+};
+
+const AvailableSalaryTable = (props) => {
+  const columns = initializeColumns(props.data, props.formatCurrency, props.formatSalary)
+  return (
+    <Table
+      noDataMessage='No available salary found'
+      columns={columns}
+      sortable={false}
+      {...props}
+    />
+  )
+}
+
+AvailableSalaryTable.propTypes = {
+  ...Table.propTypes,
+  data: PropTypes.arrayOf(salaryType).isRequired
 }
 
 export default AvailableSalaryTable

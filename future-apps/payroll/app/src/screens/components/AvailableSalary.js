@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import AvailableSalaryTable from './AvailableSalaryTable'
+import { formatCurrency, SECONDS_IN_A_YEAR } from '../../utils/formatting'
 
 import { connect } from '../../context/AragonContext'
 import Section from '../../components/Layout/Section'
@@ -34,12 +35,16 @@ class AvailableSalary extends React.PureComponent {
   }
 
   render () {
+    const { denominationToken } = this.props
+    const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
+    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals)
+
     return (
       <Container>
         <Header>
           <Section.Title>Available Salary</Section.Title>
         </Header>
-        <AvailableSalaryTable data={this.state.data} />
+        <AvailableSalaryTable data={this.state.data} formatSalary={formatSalary} formatCurrency={customFormatCurrency}/>
       </Container>
     )
   }
