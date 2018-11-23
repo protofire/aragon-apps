@@ -74,6 +74,8 @@ const SalaryTable = (props) => {
   const columns = initializeColumns(props.data, props.formatExchangeRate)
   return (
     <Table
+      paginated
+      rowsPerPage={4}
       noDataMessage='No salaries found'
       sortable={false}
       columns={columns}

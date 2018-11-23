@@ -66,7 +66,7 @@ class EmployeeList extends React.Component {
     const roles = new Set(
       employees.map(e => e.role)
     )
-    console.log('Employees', employees)
+
     return (
       <Container>
         <Header>

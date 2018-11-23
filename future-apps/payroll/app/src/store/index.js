@@ -92,7 +92,6 @@ async function onAddAllowedToken (state, event) {
 }
 
 async function onAddNewEmployee (state, event) {
-  console.log(state, event)
   const { returnValues: { employeeId, startDate } } = event
   const { employees = [] } = state
 
