@@ -1,5 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
+import BN from 'bn.js'
 import AvailableSalaryTable from './AvailableSalaryTable'
 import { formatCurrency, SECONDS_IN_A_YEAR } from '../../utils/formatting'
 
@@ -29,11 +30,10 @@ class AvailableSalary extends React.PureComponent {
   }
 
   sumExchangeRates (payments) {
-    const init = 0
-    // FIXME To sum We need to use BigNumbers
-    const reducer = (acc, payment) => acc + Number(payment.exchangeRate.amount)
+    const init = new BN(0)
+    const reducer = (acc, payment) => acc.add(new BN(payment.exchangeRate.amount))
     const totalTransferred = payments.reduce(reducer, init)
-    return totalTransferred
+    return totalTransferred.toString()
   }
 
   componentDidUpdate(prevProps) {
