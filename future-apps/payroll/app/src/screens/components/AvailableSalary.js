@@ -28,6 +28,13 @@ class AvailableSalary extends React.PureComponent {
     ))
   }
 
+  sumExchangeRates (payments) {
+    const init = 0
+    const reducer = (acc, payment) => acc + Number(payment.exchangeRate.amount)
+    const totalTransferred = payments.reduce(reducer, init)
+    return totalTransferred
+  }
+
   componentDidUpdate(prevProps) {
     if (
       (this.props.accountAddress != prevProps.accountAddress) ||
@@ -38,10 +45,7 @@ class AvailableSalary extends React.PureComponent {
       const employee = this.getEmployee(accountAddress)
       const { lastPayroll, salary, accruedValue } = employee
 
-      const init = 0
-      const reducer = (acc, payment) => acc + Number(payment.exchangeRate.amount)
-      const totalTransferred = payments.reduce(reducer, init)
-
+      const totalTransferred = this.sumExchangeRates(payments);
       const data = [{ lastPayroll, salary, totalTransferred , availableBalance: accruedValue }]
 
       this.setState({ data })
