@@ -90,7 +90,7 @@ class Table extends React.Component {
     )
   }
 
-  renderPageButtons (data) {
+  renderPageButtons (dataLength) {
     const { currentPage } = this.state
     const { navigationNextText, navigationPreviousText, rowsPerPage } = this.props
     const {
@@ -98,7 +98,7 @@ class Table extends React.Component {
       activePageButton, inactivePageButton
     } = footerStyles
 
-    const pageNumbers = Array(Math.ceil(data.length / rowsPerPage))
+    const pageNumbers = Array(Math.ceil(dataLength / rowsPerPage))
       .fill()
       .map((_, index) => index + 1)
 
@@ -144,10 +144,10 @@ class Table extends React.Component {
   }
 
   render () {
-    const { columns, data, filters, onClearFilters, sortable, noDataMessage, tableRowHeight } = this.props
+    const { columns, data, filters, onClearFilters, paginated, sortable, noDataMessage, tableRowHeight } = this.props
     const { sortColumnIndex, sortDirection } = this.state
 
-    const filteredData = data.filter(i => filters.every(f => !f || f(i)))
+    let filteredData = data.filter(i => filters.every(f => !f || f(i)))
 
     if (!filteredData.length) {
       return (
@@ -168,7 +168,12 @@ class Table extends React.Component {
     sort(filteredData, columns[sortColumnIndex].value, sortDirection)
 
     // Pagination begins after processing the filters
-    const { paginatedData, emptyRows, totalPages } = this.paginateData(filteredData)
+    let _emptyRows = 0
+    if (paginated) {
+      const { paginatedData, emptyRows, totalPages } = this.paginateData(filteredData)
+      filteredData = paginatedData
+      _emptyRows = emptyRows
+    }
 
     const header = (
       <TableRow>
@@ -192,7 +197,7 @@ class Table extends React.Component {
 
     const body = (
       <React.Fragment>
-        {paginatedData.map((item, index) => (
+        {filteredData.map((item, index) => (
           <TableRow key={`row-${item.id}-${index}`} style={{ height: `${tableRowHeight}px` }}>
             {columns.map(column => {
               const rawValue = column.value(item)
@@ -216,7 +221,7 @@ class Table extends React.Component {
             })}
           </TableRow>
         ))}
-        {this.renderEmptyRows(emptyRows)}
+        {paginated && this.renderEmptyRows(_emptyRows)}
       </React.Fragment>
     )
 
@@ -226,14 +231,14 @@ class Table extends React.Component {
         width="100%"
         style={footerStyles.card}
       >
-        {this.renderPageButtons(filteredData)}
+        {this.renderPageButtons(data.length)}
       </Card>
     )
 
     return (
       <React.Fragment>
         <BaseTable header={header} children={body} />
-        <TableFooter content={footer} />
+        {paginated && <TableFooter content={footer} />}
       </React.Fragment>
     )
   }
@@ -262,6 +267,7 @@ Table.propTypes = {
   filters: PropTypes.arrayOf(PropTypes.func),
   noDataMessage: PropTypes.string,
   onClearFilters: PropTypes.func,
+  paginated: PropTypes.bool,
   rowsPerPage: PropTypes.number,
   sortable: PropTypes.bool,
   tableRowHeight: PropTypes.number
@@ -273,6 +279,7 @@ Table.defaultProps = {
   filters: [],
   navigationNextText: 'Next',
   navigationPreviousText: 'Previous',
+  paginated: false,
   rowsPerPage: 4,
   sortable: true,
   tableRowHeight: 86,
