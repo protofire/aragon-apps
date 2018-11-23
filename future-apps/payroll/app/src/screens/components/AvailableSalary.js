@@ -30,6 +30,7 @@ class AvailableSalary extends React.PureComponent {
 
   sumExchangeRates (payments) {
     const init = 0
+    // FIXME To sum We need to use BigNumbers
     const reducer = (acc, payment) => acc + Number(payment.exchangeRate.amount)
     const totalTransferred = payments.reduce(reducer, init)
     return totalTransferred
@@ -56,7 +57,7 @@ class AvailableSalary extends React.PureComponent {
   render () {
     const { data, denominationToken } = this.state
     const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
-    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, 0)
+    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals)
     return (
       <Container>
         <Header>
