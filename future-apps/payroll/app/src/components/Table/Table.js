@@ -182,7 +182,7 @@ class Table extends React.Component {
               title={column.title}
               sortable={isSortable}
               sortDirection={isSortColumn ? sortDirection : 0}
-              onClick={isSortable && this.handleHeaderClick}
+              onClick={isSortable ? this.handleHeaderClick : () => {}}
               data-column-index={index}
             />
           )
@@ -192,8 +192,8 @@ class Table extends React.Component {
 
     const body = (
       <React.Fragment>
-        {paginatedData.map(item => (
-          <TableRow key={`row-${item.id}`} style={{ height: `${tableRowHeight}px` }}>
+        {paginatedData.map((item, index) => (
+          <TableRow key={`row-${item.id}-${index}`} style={{ height: `${tableRowHeight}px` }}>
             {columns.map(column => {
               const rawValue = column.value(item)
               const formattedValue = rawValue != null
@@ -208,7 +208,7 @@ class Table extends React.Component {
                   key={`row-${item.id}-${column.name}`}
                   {...column.cellProps}
                   children={column.render
-                    ? column.render(formattedValue, rawValue)
+                    ? column.render(formattedValue, rawValue, item)
                     : (<Text>{formattedValue}</Text>)
                   }
                   />
