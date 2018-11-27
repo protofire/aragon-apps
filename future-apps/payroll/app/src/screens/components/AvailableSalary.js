@@ -8,6 +8,8 @@ import { differenceInSeconds } from 'date-fns'
 import { connect } from '../../context/AragonContext'
 import Section from '../../components/Layout/Section'
 
+const AVAILABLE_BALANCE_TICK = 10000
+
 class AvailableSalary extends React.PureComponent {
   static defaultProps = {
     lastPayroll: Date.now(),
@@ -54,6 +56,21 @@ class AvailableSalary extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
+    if (this.props.accountAddress != prevProps.accountAddress) {
+      clearInterval(this.interval);
+      this.interval = setInterval(() => {
+        const { payments, accountAddress, denominationToken } = this.props
+
+        const employee = this.getEmployee(accountAddress)
+        const availableBalance = this.getAvailableBalance(employee, denominationToken)
+
+        const { lastPayroll, salary, totalTransferred } = this.state.data[0]
+        const data = [{ lastPayroll, salary, totalTransferred, availableBalance }]
+
+        this.setState({ data })
+      }, AVAILABLE_BALANCE_TICK);
+    }
+
     if (
       (this.props.accountAddress != prevProps.accountAddress) ||
       (this.props.payments && prevProps.payments && this.props.payments.length != prevProps.payments.length)
@@ -70,6 +87,10 @@ class AvailableSalary extends React.PureComponent {
       this.setState({ data })
       this.setState({ denominationToken })
     }
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.interval);
   }
 
   render () {
