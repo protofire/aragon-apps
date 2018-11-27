@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import BN from 'bn.js'
 import AvailableSalaryTable from './AvailableSalaryTable'
 import { formatCurrency, SECONDS_IN_A_YEAR } from '../../utils/formatting'
+import { differenceInSeconds } from 'date-fns'
 
 import { connect } from '../../context/AragonContext'
 import Section from '../../components/Layout/Section'
@@ -36,6 +37,22 @@ class AvailableSalary extends React.PureComponent {
     return totalTransferred.toString()
   }
 
+  getAvailableBalance (employee, denominationToken) {
+    const accruedTime = differenceInSeconds(
+      new Date(),
+      new Date(employee.lastPayroll)
+    )
+    const accruedSalary = (accruedTime * employee.salary) + employee.accruedValue
+    // FIXME We need to include formatTokenAmount in formatCurrency
+    const formatedAccruedSalary = formatCurrency(
+      accruedSalary,
+      '',
+      10,
+      denominationToken.decimals
+    )
+    return formatedAccruedSalary
+  }
+
   componentDidUpdate(prevProps) {
     if (
       (this.props.accountAddress != prevProps.accountAddress) ||
@@ -44,10 +61,11 @@ class AvailableSalary extends React.PureComponent {
       const { payments, accountAddress, denominationToken } = this.props
 
       const employee = this.getEmployee(accountAddress)
-      const { lastPayroll, salary, accruedValue } = employee
-
+      const availableBalance = this.getAvailableBalance(employee, denominationToken)
       const totalTransferred = this.sumExchangeRates(payments);
-      const data = [{ lastPayroll, salary, totalTransferred , availableBalance: accruedValue }]
+
+      const { lastPayroll, salary } = employee
+      const data = [{ lastPayroll, salary, totalTransferred , availableBalance }]
 
       this.setState({ data })
       this.setState({ denominationToken })
