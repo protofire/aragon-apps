@@ -45,14 +45,7 @@ class AvailableSalary extends React.PureComponent {
       new Date(employee.lastPayroll)
     )
     const accruedSalary = (accruedTime * employee.salary) + employee.accruedValue
-    // FIXME We need to include formatTokenAmount in formatCurrency
-    const formatedAccruedSalary = formatCurrency(
-      accruedSalary,
-      '',
-      10,
-      denominationToken.decimals
-    )
-    return formatedAccruedSalary
+    return accruedSalary
   }
 
   componentDidUpdate(prevProps) {
@@ -97,12 +90,17 @@ class AvailableSalary extends React.PureComponent {
     const { data, denominationToken } = this.state
     const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
     const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals)
+    const formatTokenAmount = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, 1, 2, true, true)
     return (
       <Container>
         <Header>
           <Section.Title>Available Salary</Section.Title>
         </Header>
-        <AvailableSalaryTable data={data} formatSalary={formatSalary} formatCurrency={customFormatCurrency}/>
+        <AvailableSalaryTable
+          data={data}
+          formatSalary={formatSalary}
+          formatCurrency={customFormatCurrency}
+          formatTokenAmount={formatTokenAmount} />
       </Container>
     )
   }

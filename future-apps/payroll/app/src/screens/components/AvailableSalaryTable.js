@@ -4,12 +4,12 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import Table from '../../components/Table'
 import { salaryType } from '../../types'
-import { formatDate, formatTokenAmount } from '../../utils/formatting'
+import { formatDate } from '../../utils/formatting'
 
 import { Button, theme } from '@aragon/ui'
 import Timer from '../../components/Timer'
 
-const initializeColumns = (data, formatCurrency, formatSalary) => {
+const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount) => {
   return [
     {
       name: 'last-payroll',
@@ -24,10 +24,10 @@ const initializeColumns = (data, formatCurrency, formatSalary) => {
     {
       name: 'available-balance',
       title: 'Available Balance',
-      value: data => partialAmount(data.availableBalance),
+      value: data => data.availableBalance,
       formatter: formatTokenAmount,
       render: (formattedAmount, amount, item) => (
-        <Amount positive={item.isInconming}>
+        <Amount positive={true}>
           {formattedAmount}
         </Amount>
       ),
@@ -65,16 +65,8 @@ const CellStyle = {
   fontSize: '20px'
 }
 
-const partialAmount = amount => {
-  return {
-    amount,
-    isIncoming: true,
-    displaySign: true
-  }
-};
-
 const AvailableSalaryTable = (props) => {
-  const columns = initializeColumns(props.data, props.formatCurrency, props.formatSalary)
+  const columns = initializeColumns(props.data, props.formatCurrency, props.formatSalary, props.formatTokenAmount)
   return (
     <Table
       noDataMessage='No available salary found'
