@@ -32,10 +32,11 @@ class AvailableSalary extends React.PureComponent {
     ))
   }
 
-  sumExchangeRates (payments) {
+  sumExchangeRates (payments, accountAddress) {
     const init = new BN(0)
     const reducer = (acc, payment) => acc.add(new BN(payment.exchangeRate.amount))
-    const totalTransferred = payments.reduce(reducer, init)
+    const filter = e => e.accountAddress === accountAddress
+    const totalTransferred = payments.filter(filter).reduce(reducer, init)
     return totalTransferred.toString()
   }
 
@@ -72,7 +73,7 @@ class AvailableSalary extends React.PureComponent {
 
       const employee = this.getEmployee(accountAddress)
       const availableBalance = this.getAvailableBalance(employee, denominationToken)
-      const totalTransferred = this.sumExchangeRates(payments);
+      const totalTransferred = this.sumExchangeRates(payments, accountAddress);
 
       const { lastPayroll, salary } = employee
       const data = [{ lastPayroll, salary, totalTransferred , availableBalance }]
