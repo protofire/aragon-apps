@@ -3,12 +3,12 @@ import PropTypes from 'prop-types'
 
 import styled from 'styled-components'
 import Table from '../../components/Table'
+
 import { salaryType } from '../../types'
-import { formatDate, formatTokenAmount } from '../../utils/formatting'
+import { formatDate } from '../../utils/formatting'
+import { Button, theme, SafeLink } from '@aragon/ui'
 
-import { Button, theme } from '@aragon/ui'
-
-const initializeColumns = (data, formatExchangeRate) => {
+const initializeColumns = (data, formatExchangeRate, formatTokenAmount) => {
   return [
     {
       name: 'date',
@@ -28,7 +28,9 @@ const initializeColumns = (data, formatExchangeRate) => {
       defaultValue: 'Active',
       render: (formattedValue, rawValue, item) => (
         <TransactionAddress>
-          {rawValue}
+          <SafeLink href={`https://rinkeby.etherscan.io/tx/${item.transactionAddress}`} target="_blank">
+            {rawValue}
+          </SafeLink>
         </TransactionAddress>
       )
     },
@@ -42,7 +44,7 @@ const initializeColumns = (data, formatExchangeRate) => {
       formatter: formatTokenAmount,
       render: (formattedAmount, rawAmount, item) => (
         <Amount positive={item.amount.isIncoming}>
-          {formattedAmount} {item.amount.token.symbol}
+          {formattedAmount}
         </Amount>
       )
     },
@@ -69,13 +71,12 @@ const TransactionAddress = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
 `
-
+      
 const SalaryTable = (props) => {
-  const columns = initializeColumns(props.data, props.formatExchangeRate)
+  const columns = initializeColumns(props.data, props.formatExchangeRate, props.formatTokenAmount)
   return (
     <Table
       paginated
-      rowsPerPage={4}
       noDataMessage='No salaries found'
       sortable={false}
       columns={columns}
