@@ -90,6 +90,7 @@ class DateRangeInput extends React.PureComponent {
           readOnly={true}
           icon={icon}
           iconposition={iconposition}
+          height={39}
         />
         {this.state.showPicker && (
           <React.Fragment>
