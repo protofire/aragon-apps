@@ -132,7 +132,6 @@ class Table extends React.Component {
 
   render () {
     const { columns, data, filters, onClearFilters, paginated, sortable, noDataMessage, tableRowHeight, rowsPerPage } = this.props
-    const { columns, data, filters, onClearFilters, paginated, sortable, noDataMessage, tableRowHeight } = this.props
 
     const { sortColumnIndex, sortDirection } = this.state
 
