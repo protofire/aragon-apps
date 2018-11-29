@@ -48,17 +48,27 @@ class AvailableSalary extends React.PureComponent {
     const accruedSalary = (accruedTime * employee.salary) + employee.accruedValue
     return accruedSalary
   }
-  //FIXME Need refactor
+
+  getAvailableSalaryData (state, props, updateAll) {
+    const { payments, accountAddress, denominationToken } = props
+    const employee = this.getEmployee(accountAddress)
+    const availableBalance = this.getAvailableBalance(employee, denominationToken)
+
+    const totalTransferred = (updateAll) ?
+      this.sumExchangeRates(payments, accountAddress) :
+      state.data[0].totalTransferred
+
+    const { lastPayroll, salary } = employee
+    const data = [{ lastPayroll, salary, totalTransferred, availableBalance }]
+    return data
+  }
+
   componentDidUpdate(prevProps) {
     if (this.props.accountAddress != prevProps.accountAddress) {
       clearInterval(this.interval);
       this.interval = setInterval(() => {
         this.setState((state, props) => {
-          const { payments, accountAddress, denominationToken } = props
-          const employee = this.getEmployee(accountAddress)
-          const availableBalance = this.getAvailableBalance(employee, denominationToken)
-          const { lastPayroll, salary, totalTransferred } = state.data[0]
-          const data = [{ lastPayroll, salary, totalTransferred, availableBalance }]
+          const data = this.getAvailableSalaryData(state, props, false)
           return { data }
         })
       }, AVAILABLE_BALANCE_TICK);
@@ -69,12 +79,8 @@ class AvailableSalary extends React.PureComponent {
       (this.props.payments && prevProps.payments && this.props.payments.length != prevProps.payments.length)
     ) {
       this.setState((state, props) => {
-        const { payments, accountAddress, denominationToken } = props
-        const employee = this.getEmployee(accountAddress)
-        const availableBalance = this.getAvailableBalance(employee, denominationToken)
-        const totalTransferred = this.sumExchangeRates(payments, accountAddress);
-        const { lastPayroll, salary } = employee
-        const data = [{ lastPayroll, salary, totalTransferred , availableBalance }]
+        const { denominationToken } = props
+        const data = this.getAvailableSalaryData(state, props, true)
         return { data, denominationToken }
       })
     }
