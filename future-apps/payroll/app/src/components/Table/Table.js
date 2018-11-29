@@ -132,6 +132,8 @@ class Table extends React.Component {
 
   render () {
     const { columns, data, filters, onClearFilters, paginated, sortable, noDataMessage, tableRowHeight, rowsPerPage } = this.props
+    const { columns, data, filters, onClearFilters, paginated, sortable, noDataMessage, tableRowHeight } = this.props
+
     const { sortColumnIndex, sortDirection } = this.state
 
     let filteredData = data.filter(i => filters.every(f => !f || f(i)))
@@ -210,6 +212,7 @@ class Table extends React.Component {
             })}
           </TableRow>
         ))}
+
         {shouldShowPagination && this.renderEmptyRows(_emptyRows)}
       </React.Fragment>
     )
