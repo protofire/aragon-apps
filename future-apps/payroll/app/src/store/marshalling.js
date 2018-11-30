@@ -13,7 +13,7 @@ export function date (epoch) {
 
 export function employee (data) {
   const result = {
-    id: data.id,
+    id: data.id || data.employeeId,
     accountAddress: data.accountAddress,
     domain: data.name,
     salary: currency(data.denominationSalary),
@@ -32,5 +32,29 @@ export function tokenAllocation (data) {
     address: data.address,
     symbol: data.symbol,
     allocation: parseInt(data.allocation) || 0
+  }
+}
+
+export function payment (data) {
+  const exchanged = (data.returnValues.amount / data.returnValues.exchangeRate)
+  return {
+    accountAddress: data.returnValues.employee,
+    amount: {
+      amount: data.returnValues.amount,
+      isIncoming: true, // FIXME: Assumption: all salaries are incoming - sgobotta
+      displaySign: true, // FIXME: The send payroll event should provide the displaysign option
+      token: {
+        address: data.token.address,
+        symbol: data.token.symbol,
+        decimals: data.token.decimals
+      }
+    },
+    transactionAddress: data.transactionHash,
+    date: date(data.returnValues.paymentDate),
+    status: 'Complete', // FIXME: Find out how the status is calculated - - sgobotta
+    exchangeRate: {
+      amount: data.returnValues.exchangeRate
+    },
+    exchanged
   }
 }
