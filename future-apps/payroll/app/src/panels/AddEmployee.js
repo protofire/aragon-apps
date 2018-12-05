@@ -16,7 +16,7 @@ const Form = styled.form`
   grid-template-columns: 1fr 1fr;
   column-gap: 20px;
 
-  > :first-child, > :nth-last-child(-n+2) {
+  > :first-child, > :nth-last-child(-n+1) {
     grid-column: span 2;
   }
 
@@ -27,40 +27,34 @@ const Form = styled.form`
 
 class AddEmployee extends React.PureComponent {
   static initialState = {
-    entity: null,
-    salary: null,
+    entity: '',
+    name: '',
+    role: '',
+    salary: '',
     startDate: startOfDay(new Date())
   }
 
   static validate = validator.compile({
     type: 'object',
     properties: {
+      entity: {
+        format: 'address'
+      },
+      name: {
+        type: 'string'
+      },
+      role: {
+        type: 'string'
+      },
       salary: {
         type: 'number',
         exclusiveMinimum: 0
       },
       startDate: {
-        format: 'date',
-        default: startOfDay(new Date())
-      },
-      entity: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string'
-          },
-          role: {
-            type: 'string'
-          },
-          accountAddress: {
-            type: 'string',
-            format: 'address'
-          }
-        },
-        required: ['accountAddress']
+        format: 'date'
       }
     },
-    required: ['salary', 'startDate', 'entity']
+    required: ['salary', 'startDate', 'name', 'role', 'entity']
   })
 
   state = AddEmployee.initialState
@@ -68,46 +62,56 @@ class AddEmployee extends React.PureComponent {
   componentDidUpdate (prevProps, prevState) {
     if (this.state !== prevState) {
       const state = { ...this.state }
+      const isValid = AddEmployee.validate(state)
 
       this.setState({
         ...state,
-        isValid: AddEmployee.validate(state)
+        isValid
       })
     }
   }
 
   focusFirstEmptyField = () => {
-    const { entity, salary } = this.state
+    const { entity, name, role, salary } = this.state
 
     if (!entity) {
-      this.entitySearch.input.focus()
+      this.entity.input.focus()
+    } else if (!name) {
+      this.nameInput.input.focus()
+    } else if (!role) {
+      this.roleInput.input.focus()
     } else if (!salary) {
       this.salaryInput.input.focus()
     }
   }
 
-  handleEntityChange = (accountAddress, entity) => {
-    this.setState({ entity }, () => {
-      this.focusFirstEmptyField()
-    })
+  handleEntityChange = (event) => {
+    this.setState({ entity: event.target.value })
+  }
+
+  handleNameChange = (event) => {
+    this.setState({ name: event.target.value })
+  }
+
+  handleRoleChange = (event) => {
+    this.setState({ role: event.target.value })
   }
 
   handleFormSubmit = (event) => {
     event.preventDefault()
 
     const { denominationToken, app } = this.props
-    const { salary } = this.state
+    const { accountAddress, name, role, salary, startDate } = this.state
 
     if (app) {
-      const accountAddress = this.state.entity.accountAddress
       const initialDenominationSalary = salary / SECONDS_IN_A_YEAR
 
       const adjustedAmount = toDecimals(initialDenominationSalary.toString(), denominationToken.decimals, {
         truncate: true
       })
 
-      const name = this.state.entity.domain
-      const startDate = Math.floor(this.state.startDate.getTime() / 1000)
+      // const name = this.state.entity.domain
+      const startDate = Math.floor(startDate.getTime() / 1000)
 
       app.addEmployeeWithNameAndStartDate(
         accountAddress,
@@ -140,8 +144,16 @@ class AddEmployee extends React.PureComponent {
     }
   }
 
-  setEntitySearchRef = (el) => {
-    this.entitySearch = el
+  setEntityRef = (el) => {
+    this.entity = el
+  }
+
+  setNameInputRef = (el) => {
+    this.nameInput = el
+  }
+
+  setRoleInputRef = (el) => {
+    this.roleInput = el
   }
 
   setSalaryInputRef = (el) => {
@@ -150,7 +162,7 @@ class AddEmployee extends React.PureComponent {
 
   render () {
     const { opened, onClose } = this.props
-    const { entity, salary, startDate, isValid } = this.state
+    const { entity, name, role, salary, startDate, isValid } = this.state
 
     const panel = (
       <SidePanel
@@ -163,23 +175,40 @@ class AddEmployee extends React.PureComponent {
           onSubmit={this.handleFormSubmit}
           data-testid='add-employee-form'
         >
+
           <Field label='Entity'>
-            <Input.Entity
-              ref={this.setEntitySearchRef}
-              key={entity && entity.domain}
-              value={entity && entity.domain}
+            <Input.Text
+              innerRef={this.setEntityRef}
+              value={entity}
               onChange={this.handleEntityChange}
-              inputProps={{
-                iconposition: 'right',
-                icon: <IconBlank />
-              }}
+              icon={<IconBlank />}
+              iconposition="right"
+            />
+          </Field>
+
+          <Field label='Name'>
+            <Input.Text
+              innerRef={this.setNameInputRef}
+              value={name}
+              onChange={this.handleNameChange}
+              icon={<IconBlank />}
+            />
+          </Field>
+
+          <Field label='Role'>
+            <Input.Text
+              innerRef={this.setRoleInputRef}
+              value={role}
+              onChange={this.handleRoleChange}
+              icon={<IconBlank />}
+              iconposition="right"
             />
           </Field>
 
           <Field label='Salary'>
             <Input.Currency
               innerRef={this.setSalaryInputRef}
-              value={salary || ''}
+              value={salary}
               onChange={this.handleSalaryChange}
               icon={<IconBlank />}
             />
@@ -193,30 +222,6 @@ class AddEmployee extends React.PureComponent {
               icon={<IconBlank />}
               iconposition='right'
             />
-          </Field>
-
-          <Field label='Name'>
-            <Input.Static>
-              <span data-testid='entity-name'>
-                {entity ? entity.name : ' '}
-              </span>
-            </Input.Static>
-          </Field>
-
-          <Field label='Role'>
-            <Input.Static>
-              <span data-testid='entity-role'>
-                {entity ? entity.role : ' '}
-              </span>
-            </Input.Static>
-          </Field>
-
-          <Field label='Account Address'>
-            <Input.Static>
-              <span data-testid='entity-account-address'>
-                {entity ? entity.accountAddress : ' '}
-              </span>
-            </Input.Static>
           </Field>
 
           <Button type='submit' mode='strong' disabled={!isValid}>
