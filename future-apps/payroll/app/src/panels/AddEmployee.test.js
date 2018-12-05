@@ -14,6 +14,8 @@ import { format as formatDate } from 'date-fns'
 import AddEmployeePanel from './AddEmployee'
 import AragonContext from '../context/AragonContext'
 
+import Factory from '../../test/factory'
+
 const bodyUtils = bindElementToQueries(document.body)
 
 afterEach(cleanup)
@@ -41,43 +43,34 @@ describe('Add new employee panel', () => {
   })
 
   describe('Fields', () => {
+
     describe('Entity field', () => {
-      it('renders a search input', () => {
+      it('renders an alphanumeric input', () => {
         const { fields } = renderAddEmployeePanel()
 
         expect(fields.entity).not.toBeNull()
         expect(fields.entity).toBeVisible()
-        expect(fields.entity.type).toBe('search')
+        expect(fields.entity.type).toBe('text')
       })
+    })
 
-      it('allows to search for an entity', async () => {
-        const { form, fields } = renderAddEmployeePanel()
-        const searchText = 'protofire'
+    describe('Name field', () => {
+      it('renders an alphanumeric input', () => {
+        const { fields } = renderAddEmployeePanel()
 
-        expect(fields.entity.value).toBe('')
+        expect(fields.name).not.toBeNull()
+        expect(fields.name).toBeVisible()
+        expect(fields.name.type).toBe('text')
+      })
+    })
 
-        // Enter search text into the field
-        fireEvent.change(fields.entity, { target: { value: searchText } })
+    describe('Role field', () => {
+      it('renders an alphanumeric input', () => {
+        const { fields } = renderAddEmployeePanel()
 
-        // Wait until the suggestions appear
-        const suggestion = await waitForElement(() =>
-          form.querySelector('ul > li:first-child')
-        )
-
-        expect(suggestion).not.toBeNull()
-        expect(suggestion).toHaveTextContent(
-          'ProtoFire (protofire.aragonid.eth)'
-        )
-
-        // Select first suggestion
-        fireEvent.click(suggestion)
-
-        // Verify that the data for the selected entity is shown
-        expect(fields.name).toHaveTextContent('ProtoFire')
-        expect(fields.role).toHaveTextContent('Organization')
-        expect(fields.accountAddress).toHaveTextContent(
-          'xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-        )
+        expect(fields.role).not.toBeNull()
+        expect(fields.role).toBeVisible()
+        expect(fields.role.type).toBe('text')
       })
     })
 
@@ -111,62 +104,71 @@ describe('Add new employee panel', () => {
   describe('Validations', () => {
     it('entity field is required', async () => {
       const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { entity, name, role, salary } = fields
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
+      fireEvent.change(name, {
+        target: { value: 'ProtoFire' }
+      })
+
+      fireEvent.change(role, {
+        target: { value: 'Organization' }
+      })
+
       // Fill in Salary field with a valid value
-      fireEvent.change(fields.salary, {
-        target: { value: '40000' }
+      fireEvent.change(salary, {
+        target: { value: 40000 }
       })
 
       // Empty value for entity field
-      expect(fields.entity.value).toBe('')
+      expect(entity.value).toBe('')
       expect(buttons.submit).toHaveAttribute('disabled')
 
-      // Valid value for entity field
-      const suggestion = await searchEntity('protofire.aragonid.eth')
-      fireEvent.click(suggestion)
+      // Fill in Entity field with a valid value
+      fireEvent.change(entity, {
+        target: { value: '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7' }
+      })
 
       expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('allows only positive salaries', async () => {
       const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { entity, name, role, salary } = fields
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Fill in Entity field with a valid value
-      const suggestion = await searchEntity('protofire.aragonid.eth')
-      fireEvent.click(suggestion)
+      fireEvent.change(entity, {
+        target: { value: '0xDcC5dD922fb1D0fd0c450a0636a8cE827521f0eD'}
+      })
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with empty salary
-      fireEvent.change(fields.salary, {
+      fireEvent.change(salary, {
         target: { value: '' }
       })
 
-      expect(fields.accountAddress).toHaveTextContent(
-        'xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-      )
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with negative salary
-      fireEvent.change(fields.salary, {
+      fireEvent.change(salary, {
         target: { value: '-40000' }
       })
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with salary equal to 0
-      fireEvent.change(fields.salary, {
+      fireEvent.change(salary, {
         target: { value: '0' }
       })
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with positive salary
-      fireEvent.change(fields.salary, {
+      fireEvent.change(salary, {
         target: { value: '40000' }
       })
 
@@ -206,13 +208,10 @@ function renderAddEmployeePanel (props) {
 
   const fields = {
     entity: panel.queryByLabelText('Entity'),
+    name: panel.queryByLabelText('Name'),
+    role: panel.queryByLabelText('Role'),
     salary: panel.queryByLabelText('Salary'),
     startDate: panel.queryByLabelText('Start Date'),
-
-    // Static
-    name: panel.queryByTestId('entity-name'),
-    role: panel.queryByTestId('entity-role'),
-    accountAddress: panel.queryByTestId('entity-account-address')
   }
 
   const buttons = {
@@ -220,13 +219,5 @@ function renderAddEmployeePanel (props) {
     submit: modalRoot.querySelector('button[type="submit"]')
   }
 
-  const searchEntity = searchText => {
-    fireEvent.change(fields.entity, {
-      target: { value: searchText }
-    })
-
-    return waitForElement(() => form.querySelector('ul > li:first-child'))
-  }
-
-  return { form, fields, buttons, searchEntity }
+  return { form, fields, buttons }
 }
