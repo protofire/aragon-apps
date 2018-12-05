@@ -41,10 +41,12 @@ class AddEmployee extends React.PureComponent {
         format: 'address'
       },
       name: {
-        type: 'string'
+        type: 'string',
+        minLength: 3
       },
       role: {
-        type: 'string'
+        type: 'string',
+        minLength: 3
       },
       salary: {
         type: 'number',
@@ -61,12 +63,11 @@ class AddEmployee extends React.PureComponent {
 
   componentDidUpdate (prevProps, prevState) {
     if (this.state !== prevState) {
-      const state = { ...this.state }
-      const isValid = AddEmployee.validate(state)
-
-      this.setState({
-        ...state,
-        isValid
+      this.setState((state) => {
+        const isValid = AddEmployee.validate(state)
+        return {
+          isValid
+        }
       })
     }
   }
