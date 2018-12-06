@@ -266,6 +266,51 @@ describe('Add new employee panel', () => {
         expect(buttons.submit).not.toHaveAttribute('disabled')
       }
     })
+
+    it('role field is required', async () => {
+      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { entity, name, role, salary } = fields
+
+      const account = Factory.createAccountArgs()
+
+      {
+        // When the form initializes, the submit button is disabled
+        expect(buttons.submit).toHaveAttribute('disabled')
+      }
+
+      {
+        // Fill in the Name field with a valid value
+        fireEvent.change(name, { target: { value: account.name } })
+
+        expect(name.value).toBe(account.name)
+        expect(buttons.submit).toHaveAttribute('disabled')
+      }
+
+      {
+        // Fill in the Entity field with a valid value
+        fireEvent.change(entity, { target: { value: account.address } })
+
+        expect(entity.value).toBe(account.address)
+        expect(buttons.submit).toHaveAttribute('disabled')
+      }
+
+      {
+        // Fill in Salary field with a valid value
+        const salaryAmount = '40000'
+        fireEvent.change(salary, { target: { value: salaryAmount } })
+
+        expect(salary.value).toBe(salaryAmount)
+        expect(buttons.submit).toHaveAttribute('disabled')
+      }
+
+      {
+        // Fill in Role field with a valid value
+        fireEvent.change(role, { target: { value: account.role } })
+
+        expect(role.value).toBe(account.role)
+        expect(buttons.submit).not.toHaveAttribute('disabled')
+      }
+    })
   })
 })
 
