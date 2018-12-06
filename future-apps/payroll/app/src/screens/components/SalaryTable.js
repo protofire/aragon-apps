@@ -1,13 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import styled from 'styled-components'
-import Table from '../../components/Table'
 
-import { salaryType } from '../../types'
-import { formatDate } from '../../utils/formatting'
-import { TransactionBadge } from '../../components/Badge'
 import { theme } from '@aragon/ui'
+import Table from '/components/Table'
+import { TransactionBadge } from '/components/Badge'
+
+import { salaryType } from '/types'
+import { formatDate } from '/utils/formatting'
 
 const initializeColumns = (data, formatExchangeRate, formatTokenAmount) => {
   return [
