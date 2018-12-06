@@ -101,10 +101,11 @@ class AddEmployee extends React.PureComponent {
   handleFormSubmit = (event) => {
     event.preventDefault()
 
-    const { denominationToken, app } = this.props
-    const { accountAddress, name, role, salary, startDate } = this.state
+    const { denominationToken, app, isAddressAvailable } = this.props
+    const { entity, name, role, salary, startDate } = this.state
+    const _isAddressAvailable = isAddressAvailable(entity)
 
-    if (app) {
+    if (app && _isAddressAvailable) {
       const initialDenominationSalary = salary / SECONDS_IN_A_YEAR
 
       const adjustedAmount = toDecimals(initialDenominationSalary.toString(), denominationToken.decimals, {
@@ -112,13 +113,13 @@ class AddEmployee extends React.PureComponent {
       })
 
       // const name = this.state.entity.domain
-      const startDate = Math.floor(startDate.getTime() / 1000)
+      const _startDate = Math.floor(startDate.getTime() / 1000)
 
       app.addEmployeeWithNameAndStartDate(
-        accountAddress,
+        entity,
         adjustedAmount,
         name,
-        startDate
+        _startDate
       ).subscribe(employee => {
         if (employee) {
           // Reset form data
@@ -164,7 +165,6 @@ class AddEmployee extends React.PureComponent {
   render () {
     const { opened, onClose } = this.props
     const { entity, name, role, salary, startDate, isValid } = this.state
-
     const panel = (
       <SidePanel
         title='Add new employee'
@@ -244,9 +244,10 @@ AddEmployee.propsType = {
   opened: PropTypes.bool
 }
 
-function mapStateToProps ({ denominationToken = {} }) {
+function mapStateToProps ({ denominationToken = {}, employees = [] }) {
   return {
-    denominationToken
+    denominationToken,
+    isAddressAvailable: (address) => employees.every(employee => employee.accountAddress !== address)
   }
 }
 
