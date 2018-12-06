@@ -102,7 +102,7 @@ class AddEmployee extends React.PureComponent {
     event.preventDefault()
 
     const { denominationToken, app, isAddressAvailable } = this.props
-    const { entity, name, role, salary, startDate } = this.state
+    const { entity, name, salary, startDate } = this.state
     const _isAddressAvailable = isAddressAvailable(entity)
 
     if (app && _isAddressAvailable) {
@@ -183,7 +183,7 @@ class AddEmployee extends React.PureComponent {
               value={entity}
               onChange={this.handleEntityChange}
               icon={<IconBlank />}
-              iconposition="right"
+              iconposition='right'
             />
           </Field>
 
@@ -202,7 +202,7 @@ class AddEmployee extends React.PureComponent {
               value={role}
               onChange={this.handleRoleChange}
               icon={<IconBlank />}
-              iconposition="right"
+              iconposition='right'
             />
           </Field>
 

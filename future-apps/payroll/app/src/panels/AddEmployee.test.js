@@ -4,8 +4,7 @@ import React from 'react'
 import {
   cleanup,
   fireEvent,
-  render,
-  waitForElement
+  render
 } from 'react-testing-library'
 import { bindElementToQueries } from 'dom-testing-library'
 import 'jest-dom/extend-expect'
@@ -43,7 +42,6 @@ describe('Add new employee panel', () => {
   })
 
   describe('Fields', () => {
-
     describe('Entity field', () => {
       it('renders an alphanumeric input', () => {
         const { fields } = renderAddEmployeePanel()
@@ -103,213 +101,168 @@ describe('Add new employee panel', () => {
 
   describe('Validations', () => {
     it('entity field is required', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { fields, buttons } = renderAddEmployeePanel()
       const { entity, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
       expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Name field with a valid value
-        fireEvent.change(name, { target: { value: account.name } })
+      // Fill in the Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
 
-        expect(name.value).toBe(account.name)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(name.value).toBe(account.name)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Role field with a valid value
-        fireEvent.change(role, { target: { value: account.role } })
+      // Fill in the Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
 
-        expect(buttons.submit).toHaveAttribute('disabled')
-        expect(role.value).toBe(account.role)
-      }
+      expect(buttons.submit).toHaveAttribute('disabled')
+      expect(role.value).toBe(account.role)
 
-      {
-        // Fill in Salary field with a valid value
-        const salaryAmount = '40000'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Fill in Salary field with a valid value
+      const salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(buttons.submit).toHaveAttribute('disabled')
-        expect(salary.value).toBe(salaryAmount)
-      }
+      expect(buttons.submit).toHaveAttribute('disabled')
+      expect(salary.value).toBe(salaryAmount)
 
-      {
-        // Empty value for entity field
-        expect(entity.value).toBe('')
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      // Empty value for entity field
+      expect(entity.value).toBe('')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in Entity field with a valid value
-        fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in Entity field with a valid value
+      fireEvent.change(entity, { target: { value: account.address } })
 
-        expect(entity.value).toBe(account.address)
-        expect(buttons.submit).not.toHaveAttribute('disabled')
-      }
+      expect(entity.value).toBe(account.address)
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('allows only positive salaries', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { fields, buttons } = renderAddEmployeePanel()
       const { entity, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
+      let salaryAmount
 
-      {
-        // When the form initializes, the submit button is disabled
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      // When the form initializes, the submit button is disabled
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Name field with a valid value
-        fireEvent.change(name, { target: { value: account.name } })
+      // Fill in the Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
 
-        expect(name.value).toBe(account.name)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(name.value).toBe(account.name)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Role field with a valid value
-        fireEvent.change(role, { target: { value: account.role } })
+      // Fill in the Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
 
-        expect(buttons.submit).toHaveAttribute('disabled')
-        expect(role.value).toBe(account.role)
-      }
+      expect(buttons.submit).toHaveAttribute('disabled')
+      expect(role.value).toBe(account.role)
 
-      {
-        // Fill in Entity field with a valid value
-        fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in Entity field with a valid value
+      fireEvent.change(entity, { target: { value: account.address } })
 
-        expect(entity.value).toBe(account.address)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(entity.value).toBe(account.address)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Try with empty salary
-        const salaryAmount = ''
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Try with empty salary
+      salaryAmount = ''
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe('')
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe('')
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Try with negative salary
-        const salaryAmount = '-40000'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Try with negative salary
+      salaryAmount = '-40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe(salaryAmount)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe(salaryAmount)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Try with salary equal to 0
-        const salaryAmount = '0'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Try with salary equal to 0
+      salaryAmount = '0'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe(salaryAmount)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe(salaryAmount)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Try with positive salary
-        const salaryAmount = '40000'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Try with positive salary
+      salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe(salaryAmount)
-        expect(buttons.submit).not.toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe(salaryAmount)
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('name field is required', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { fields, buttons } = renderAddEmployeePanel()
       const { entity, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
-      {
-        // When the form initializes, the submit button is disabled
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      // When the form initializes, the submit button is disabled
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Entity field with a valid value
-        fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in the Entity field with a valid value
+      fireEvent.change(entity, { target: { value: account.address } })
 
-        expect(entity.value).toBe(account.address)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(entity.value).toBe(account.address)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Role field with a valid value
-        fireEvent.change(role, { target: { value: account.role } })
+      // Fill in the Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
 
-        expect(role.value).toBe(account.role)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(role.value).toBe(account.role)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in Salary field with a valid value
-        const salaryAmount = '40000'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Fill in Salary field with a valid value
+      const salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe(salaryAmount)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe(salaryAmount)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in Name field with a valid value
-        fireEvent.change(name, { target: { value: account.name } })
+      // Fill in Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
 
-        expect(name.value).toBe(account.name)
-        expect(buttons.submit).not.toHaveAttribute('disabled')
-      }
+      expect(name.value).toBe(account.name)
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('role field is required', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+      const { fields, buttons } = renderAddEmployeePanel()
       const { entity, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
-      {
-        // When the form initializes, the submit button is disabled
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      // When the form initializes, the submit button is disabled
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Name field with a valid value
-        fireEvent.change(name, { target: { value: account.name } })
+      // Fill in the Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
 
-        expect(name.value).toBe(account.name)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(name.value).toBe(account.name)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in the Entity field with a valid value
-        fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in the Entity field with a valid value
+      fireEvent.change(entity, { target: { value: account.address } })
 
-        expect(entity.value).toBe(account.address)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(entity.value).toBe(account.address)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in Salary field with a valid value
-        const salaryAmount = '40000'
-        fireEvent.change(salary, { target: { value: salaryAmount } })
+      // Fill in Salary field with a valid value
+      const salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
 
-        expect(salary.value).toBe(salaryAmount)
-        expect(buttons.submit).toHaveAttribute('disabled')
-      }
+      expect(salary.value).toBe(salaryAmount)
+      expect(buttons.submit).toHaveAttribute('disabled')
 
-      {
-        // Fill in Role field with a valid value
-        fireEvent.change(role, { target: { value: account.role } })
+      // Fill in Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
 
-        expect(role.value).toBe(account.role)
-        expect(buttons.submit).not.toHaveAttribute('disabled')
-      }
+      expect(role.value).toBe(account.role)
+      expect(buttons.submit).not.toHaveAttribute('disabled')
     })
   })
 })
@@ -348,7 +301,7 @@ function renderAddEmployeePanel (props) {
     name: panel.queryByLabelText('Name'),
     role: panel.queryByLabelText('Role'),
     salary: panel.queryByLabelText('Salary'),
-    startDate: panel.queryByLabelText('Start Date'),
+    startDate: panel.queryByLabelText('Start Date')
   }
 
   const buttons = {
