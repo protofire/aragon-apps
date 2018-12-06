@@ -1,1 +1,1 @@
-export * from './Badge.Identity'
+export * from './Badge.Transaction'
