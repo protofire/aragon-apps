@@ -11,7 +11,6 @@ import validator from '../data/validation'
 import { toDecimals } from '../utils/math-utils'
 import { SECONDS_IN_A_YEAR } from '../utils/formatting'
 
-
 class AddEmployee extends React.PureComponent {
   static initialState = {
     address: '',
