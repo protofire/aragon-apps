@@ -86,7 +86,6 @@ class AddEmployee extends React.PureComponent {
 
   handleFormSubmit = (event) => {
     event.preventDefault()
-
     const { denominationToken, app, isAddressAvailable } = this.props
     const { address, name, salary, startDate } = this.state
     const _isAddressAvailable = isAddressAvailable(address)

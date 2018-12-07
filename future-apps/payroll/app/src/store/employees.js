@@ -9,9 +9,8 @@ export function getEmployeeById (id) {
       return employee({ id, ...data })
     })
     .flatMap(async employee => {
-      const [{ name, role }] = await getIdentity(employee.domain)
-
-      return { ...employee, name, role }
+      // Role is a static value until further discussion
+      return { ...employee, name: employee.domain, role: 'Employee' }
     })
     .toPromise()
 }
@@ -24,7 +23,6 @@ export function getEmployeeByAddress (accountAddress) {
     })
     .flatMap(async employee => {
       const [{ name, role }] = await getIdentity(employee.domain)
-
       return { ...employee, name, role }
     })
     .toPromise()
