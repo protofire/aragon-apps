@@ -11,23 +11,10 @@ import validator from '../data/validation'
 import { toDecimals } from '../utils/math-utils'
 import { SECONDS_IN_A_YEAR } from '../utils/formatting'
 
-const Form = styled.form`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 20px;
-
-  > :first-child, > :nth-last-child(-n+1) {
-    grid-column: span 2;
-  }
-
-  > :last-child {
-    margin-top: 20px;
-  }
-`
 
 class AddEmployee extends React.PureComponent {
   static initialState = {
-    entity: '',
+    address: '',
     name: '',
     role: '',
     salary: '',
@@ -37,7 +24,7 @@ class AddEmployee extends React.PureComponent {
   static validate = validator.compile({
     type: 'object',
     properties: {
-      entity: {
+      address: {
         format: 'address'
       },
       name: {
@@ -56,7 +43,7 @@ class AddEmployee extends React.PureComponent {
         format: 'date'
       }
     },
-    required: ['salary', 'startDate', 'name', 'role', 'entity']
+    required: ['salary', 'startDate', 'name', 'role', 'address']
   })
 
   state = AddEmployee.initialState
@@ -73,10 +60,10 @@ class AddEmployee extends React.PureComponent {
   }
 
   focusFirstEmptyField = () => {
-    const { entity, name, role, salary } = this.state
+    const { address, name, role, salary } = this.state
 
-    if (!entity) {
-      this.entity.input.focus()
+    if (!address) {
+      this.address.input.focus()
     } else if (!name) {
       this.nameInput.input.focus()
     } else if (!role) {
@@ -86,8 +73,8 @@ class AddEmployee extends React.PureComponent {
     }
   }
 
-  handleEntityChange = (event) => {
-    this.setState({ entity: event.target.value })
+  handleAddressChange = (event) => {
+    this.setState({ address: event.target.value })
   }
 
   handleNameChange = (event) => {
@@ -102,8 +89,8 @@ class AddEmployee extends React.PureComponent {
     event.preventDefault()
 
     const { denominationToken, app, isAddressAvailable } = this.props
-    const { entity, name, salary, startDate } = this.state
-    const _isAddressAvailable = isAddressAvailable(entity)
+    const { address, name, salary, startDate } = this.state
+    const _isAddressAvailable = isAddressAvailable(address)
 
     if (app && _isAddressAvailable) {
       const initialDenominationSalary = salary / SECONDS_IN_A_YEAR
@@ -112,11 +99,10 @@ class AddEmployee extends React.PureComponent {
         truncate: true
       })
 
-      // const name = this.state.entity.domain
       const _startDate = Math.floor(startDate.getTime() / 1000)
 
       app.addEmployeeWithNameAndStartDate(
-        entity,
+        address,
         adjustedAmount,
         name,
         _startDate
@@ -146,8 +132,8 @@ class AddEmployee extends React.PureComponent {
     }
   }
 
-  setEntityRef = (el) => {
-    this.entity = el
+  setAddressRef = (el) => {
+    this.address = el
   }
 
   setNameInputRef = (el) => {
@@ -164,7 +150,7 @@ class AddEmployee extends React.PureComponent {
 
   render () {
     const { opened, onClose } = this.props
-    const { entity, name, role, salary, startDate, isValid } = this.state
+    const { address, name, role, salary, startDate, isValid } = this.state
     const panel = (
       <SidePanel
         title='Add new employee'
@@ -177,11 +163,11 @@ class AddEmployee extends React.PureComponent {
           data-testid='add-employee-form'
         >
 
-          <Field label='Entity'>
+          <Field label='Address'>
             <Input.Text
-              innerRef={this.setEntityRef}
-              value={entity}
-              onChange={this.handleEntityChange}
+              innerRef={this.setAddressRef}
+              value={address}
+              onChange={this.handleAddressChange}
               icon={<IconBlank />}
               iconposition='right'
             />
@@ -243,6 +229,20 @@ AddEmployee.propsType = {
   onClose: PropTypes.func,
   opened: PropTypes.bool
 }
+
+const Form = styled.form`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+
+  > :first-child, > :nth-last-child(-n+1) {
+    grid-column: span 2;
+  }
+
+  > :last-child {
+    margin-top: 20px;
+  }
+`
 
 function mapStateToProps ({ denominationToken = {}, employees = [] }) {
   return {

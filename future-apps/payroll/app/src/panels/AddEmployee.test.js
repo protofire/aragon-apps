@@ -42,13 +42,13 @@ describe('Add new employee panel', () => {
   })
 
   describe('Fields', () => {
-    describe('Entity field', () => {
+    describe('Address field', () => {
       it('renders an alphanumeric input', () => {
         const { fields } = renderAddEmployeePanel()
 
-        expect(fields.entity).not.toBeNull()
-        expect(fields.entity).toBeVisible()
-        expect(fields.entity.type).toBe('text')
+        expect(fields.address).not.toBeNull()
+        expect(fields.address).toBeVisible()
+        expect(fields.address.type).toBe('text')
       })
     })
 
@@ -100,9 +100,9 @@ describe('Add new employee panel', () => {
   })
 
   describe('Validations', () => {
-    it('entity field is required', async () => {
+    it('address field is required', async () => {
       const { fields, buttons } = renderAddEmployeePanel()
-      const { entity, name, role, salary } = fields
+      const { address, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
@@ -127,20 +127,20 @@ describe('Add new employee panel', () => {
       expect(buttons.submit).toHaveAttribute('disabled')
       expect(salary.value).toBe(salaryAmount)
 
-      // Empty value for entity field
-      expect(entity.value).toBe('')
+      // Empty value for address field
+      expect(address.value).toBe('')
       expect(buttons.submit).toHaveAttribute('disabled')
 
-      // Fill in Entity field with a valid value
-      fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in Address field with a valid value
+      fireEvent.change(address, { target: { value: account.address } })
 
-      expect(entity.value).toBe(account.address)
+      expect(address.value).toBe(account.address)
       expect(buttons.submit).not.toHaveAttribute('disabled')
     })
 
     it('allows only positive salaries', async () => {
       const { fields, buttons } = renderAddEmployeePanel()
-      const { entity, name, role, salary } = fields
+      const { address, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
       let salaryAmount
@@ -160,10 +160,10 @@ describe('Add new employee panel', () => {
       expect(buttons.submit).toHaveAttribute('disabled')
       expect(role.value).toBe(account.role)
 
-      // Fill in Entity field with a valid value
-      fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in Address field with a valid value
+      fireEvent.change(address, { target: { value: account.address } })
 
-      expect(entity.value).toBe(account.address)
+      expect(address.value).toBe(account.address)
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Try with empty salary
@@ -197,17 +197,17 @@ describe('Add new employee panel', () => {
 
     it('name field is required', async () => {
       const { fields, buttons } = renderAddEmployeePanel()
-      const { entity, name, role, salary } = fields
+      const { address, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
       // When the form initializes, the submit button is disabled
       expect(buttons.submit).toHaveAttribute('disabled')
 
-      // Fill in the Entity field with a valid value
-      fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in the Address field with a valid value
+      fireEvent.change(address, { target: { value: account.address } })
 
-      expect(entity.value).toBe(account.address)
+      expect(address.value).toBe(account.address)
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Fill in the Role field with a valid value
@@ -232,7 +232,7 @@ describe('Add new employee panel', () => {
 
     it('role field is required', async () => {
       const { fields, buttons } = renderAddEmployeePanel()
-      const { entity, name, role, salary } = fields
+      const { address, name, role, salary } = fields
 
       const account = Factory.createAccountArgs()
 
@@ -245,10 +245,10 @@ describe('Add new employee panel', () => {
       expect(name.value).toBe(account.name)
       expect(buttons.submit).toHaveAttribute('disabled')
 
-      // Fill in the Entity field with a valid value
-      fireEvent.change(entity, { target: { value: account.address } })
+      // Fill in the Address field with a valid value
+      fireEvent.change(address, { target: { value: account.address } })
 
-      expect(entity.value).toBe(account.address)
+      expect(address.value).toBe(account.address)
       expect(buttons.submit).toHaveAttribute('disabled')
 
       // Fill in Salary field with a valid value
@@ -297,7 +297,7 @@ function renderAddEmployeePanel (props) {
   const form = panel.getByTestId('add-employee-form')
 
   const fields = {
-    entity: panel.queryByLabelText('Entity'),
+    address: panel.queryByLabelText('Address'),
     name: panel.queryByLabelText('Name'),
     role: panel.queryByLabelText('Role'),
     salary: panel.queryByLabelText('Salary'),
