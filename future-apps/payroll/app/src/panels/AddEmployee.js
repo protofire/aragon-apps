@@ -86,7 +86,7 @@ class AddEmployee extends React.PureComponent {
 
   handleAddressChange = (event) => {
     const { address } = this.state
-    const { error } = address
+    const error = NO_ERROR
     const value = event.target.value
     this.setState({
       address: {
@@ -102,6 +102,14 @@ class AddEmployee extends React.PureComponent {
 
   handleRoleChange = (event) => {
     this.setState({ role: event.target.value })
+  }
+
+  handleSalaryChange = (event) => {
+    this.setState({ salary: event.target.value })
+  }
+
+  handleStartDateChange = (date) => {
+    this.setState({ startDate: date })
   }
 
   handleFormSubmit = (event) => {
@@ -144,14 +152,6 @@ class AddEmployee extends React.PureComponent {
         }
       })
     }
-  }
-
-  handleSalaryChange = (event) => {
-    this.setState({ salary: event.target.value })
-  }
-
-  handleStartDateChange = (date) => {
-    this.setState({ startDate: date })
   }
 
   handlePanelToggle = (opened) => {

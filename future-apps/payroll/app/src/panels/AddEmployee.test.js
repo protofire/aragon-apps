@@ -297,11 +297,11 @@ function renderAddEmployeePanel (props) {
   const form = panel.getByTestId('add-employee-form')
 
   const fields = {
-    address: panel.queryByLabelText('Address'),
-    name: panel.queryByLabelText('Name'),
-    role: panel.queryByLabelText('Role'),
-    salary: panel.queryByLabelText('Salary'),
-    startDate: panel.queryByLabelText('Start Date')
+    address: panel.queryByLabelText('Address*'),
+    name: panel.queryByLabelText('Name*'),
+    role: panel.queryByLabelText('Role*'),
+    salary: panel.queryByLabelText('Salary*'),
+    startDate: panel.queryByLabelText('Start Date*')
   }
 
   const buttons = {
