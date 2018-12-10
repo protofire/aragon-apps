@@ -9,7 +9,7 @@ export function getEmployeeById (id) {
       return employee({ id, ...data })
     })
     .flatMap(async employee => {
-      // Role is a static value until further discussion
+      // Role is a static value until further discussion - sgobotta
       return { ...employee, name: employee.domain, role: 'Employee' }
     })
     .toPromise()
