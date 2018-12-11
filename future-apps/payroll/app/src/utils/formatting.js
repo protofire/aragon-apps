@@ -1,7 +1,7 @@
 import { format as dateFormatter } from 'date-fns'
 import { round } from './math-utils'
 
-const DEFAULT_LOCALE = 'en-US'
+export const DEFAULT_LOCALE = 'en-US'
 const DEFAULT_DATE_FORMAT = 'LL/dd/yyyy'
 
 export const SECONDS_IN_A_YEAR = 31557600 // 365.25 days

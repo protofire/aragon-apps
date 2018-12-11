@@ -79,7 +79,7 @@ const initializeColumns = (data, denominationToken) => {
 }
 
 const CellStyle = {
-  fontSize: '20px'
+  fontSize: '23px'
 }
 
 const AvailableSalaryTable = (props) => {
