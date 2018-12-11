@@ -4,12 +4,13 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import Table from '../../components/Table'
 import { salaryType } from '../../types'
-import { formatDate } from '../../utils/formatting'
+import { formatDate, SECONDS_IN_A_YEAR } from '~/utils/formatting'
+import { Amount } from '~/components/Amount'
 
 import { Button, theme } from '@aragon/ui'
 import Timer from '../../components/Timer'
 
-const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount) => {
+const initializeColumns = (data, denominationToken) => {
   return [
     {
       name: 'last-payroll',
@@ -25,11 +26,17 @@ const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount
       name: 'available-balance',
       title: 'Available Balance',
       value: data => data.availableBalance,
-      formatter: formatTokenAmount,
-      render: (formattedAmount, amount, item) => (
-        <Amount positive={true}>
-          {formattedAmount}
-        </Amount>
+      render: (formattedValue, rawValue, item) => (
+        <Amount
+          amount={rawValue}
+          symbol={denominationToken.symbol}
+          decimals={10}
+          pow={denominationToken.decimals}
+          isIncoming={true}
+          displaySign={true}
+          color={theme.positive}
+          weight='bold'
+        />
       ),
       cellProps: {
         style: CellStyle
@@ -39,7 +46,14 @@ const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount
       name: 'total-transferred',
       title: 'Total Transferred',
       value: data => data.totalTransferred,
-      formatter: formatCurrency,
+      render: (formattedValue, rawValue, item) => (
+        <Amount
+          amount={rawValue}
+          symbol={denominationToken.symbol}
+          decimals={10}
+          pow={0}
+        />
+      ),
       cellProps: {
         style: CellStyle
       }
@@ -48,7 +62,15 @@ const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount
       name: 'your-yearly-salary',
       title: 'Your yearly salary',
       value: data => data.salary,
-      formatter: formatSalary,
+      render: (formattedValue, rawValue, item) => (
+        <Amount
+          amount={rawValue}
+          symbol={denominationToken.symbol}
+          decimals={10}
+          pow={denominationToken.decimals}
+          multiplier={SECONDS_IN_A_YEAR}
+        />
+      ),
       cellProps: {
         style: CellStyle
       }
@@ -56,17 +78,12 @@ const initializeColumns = (data, formatCurrency, formatSalary, formatTokenAmount
   ]
 }
 
-const Amount = styled.span`
-  font-weight: 600;
-  color: ${theme.positive}
-`
-
 const CellStyle = {
   fontSize: '20px'
 }
 
 const AvailableSalaryTable = (props) => {
-  const columns = initializeColumns(props.data, props.formatCurrency, props.formatSalary, props.formatTokenAmount)
+  const columns = initializeColumns(props.data, props.denominationToken)
   return (
     <Table
       noDataMessage='No available salary found'

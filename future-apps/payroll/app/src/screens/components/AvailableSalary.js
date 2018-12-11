@@ -1,7 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
 import AvailableSalaryTable from './AvailableSalaryTable'
-import { formatCurrency, SECONDS_IN_A_YEAR } from '~/utils/formatting'
 import { differenceInSeconds } from 'date-fns'
 import { summation } from '~/utils/calculations'
 
@@ -91,9 +90,6 @@ class AvailableSalary extends React.PureComponent {
 
   render () {
     const { data, denominationToken } = this.state
-    const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
-    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, 0)
-    const formatTokenAmount = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, 1, 2, true, true)
     return (
       <Container>
         <Header>
@@ -101,9 +97,8 @@ class AvailableSalary extends React.PureComponent {
         </Header>
         <AvailableSalaryTable
           data={data}
-          formatSalary={formatSalary}
-          formatCurrency={customFormatCurrency}
-          formatTokenAmount={formatTokenAmount} />
+          denominationToken={denominationToken}
+         />
       </Container>
     )
   }
