@@ -13,6 +13,7 @@ import { SECONDS_IN_A_YEAR } from '../utils/formatting'
 
 const NO_ERROR = Symbol('NO_ERROR')
 const ADDRESS_NOT_AVAILABLE_ERROR = Symbol('ADDRESS_NOT_AVAILABLE_ERROR')
+const ADDRESS_INVALID_FORMAT = Symbol('ADDRESS_INVALID_FORMAT')
 
 class AddEmployee extends React.PureComponent {
   static initialState = {
@@ -29,15 +30,6 @@ class AddEmployee extends React.PureComponent {
   static validate = validator.compile({
     type: 'object',
     properties: {
-      address: {
-        type: 'object',
-        properties: {
-          value: {
-            format: 'address'
-          }
-        },
-        required: ['value']
-      },
       name: {
         type: 'string',
         minLength: 3
@@ -54,21 +46,20 @@ class AddEmployee extends React.PureComponent {
         format: 'date'
       }
     },
-    required: ['salary', 'startDate', 'name', 'role', 'address']
+    required: ['salary', 'startDate', 'name', 'role']
+  })
+
+  static validateAddress = validator.compile({
+    type: 'object',
+    properties: {
+      value: {
+        format: 'address'
+      }
+    },
+    required: ['value']
   })
 
   state = AddEmployee.initialState
-
-  componentDidUpdate (prevProps, prevState) {
-    if (this.state !== prevState) {
-      this.setState((state) => {
-        const isValid = AddEmployee.validate(state)
-        return {
-          isValid
-        }
-      })
-    }
-  }
 
   focusFirstEmptyField = () => {
     const { address, name, role, salary } = this.state
@@ -117,7 +108,18 @@ class AddEmployee extends React.PureComponent {
     const { denominationToken, app, isAddressAvailable } = this.props
     const { address, name, salary, startDate } = this.state
     const _address = address.value
+    const _isValidAddress = AddEmployee.validateAddress(address)
     const _isAddressAvailable = isAddressAvailable(_address)
+
+    if (!_isValidAddress) {
+      this.setState(({ address }) => ({
+        address: {
+          ...address,
+          error: ADDRESS_INVALID_FORMAT
+        }
+      }))
+      return
+    }
 
     if (!_isAddressAvailable) {
       this.setState(({ address }) => ({
@@ -128,7 +130,10 @@ class AddEmployee extends React.PureComponent {
       }))
       return
     }
-    if (app && _isAddressAvailable) {
+
+    const isValidForm = AddEmployee.validate(this.state)
+
+    if (app && isValidForm) {
       const initialDenominationSalary = salary / SECONDS_IN_A_YEAR
 
       const adjustedAmount = toDecimals(initialDenominationSalary.toString(), denominationToken.decimals, {
@@ -178,10 +183,12 @@ class AddEmployee extends React.PureComponent {
 
   render () {
     const { opened, onClose } = this.props
-    const { address, name, role, salary, startDate, isValid } = this.state
+    const { address, name, role, salary, startDate } = this.state
 
     let errorMessage
-    if (address.error === ADDRESS_NOT_AVAILABLE_ERROR) {
+    if (address.error === ADDRESS_INVALID_FORMAT) {
+      errorMessage = 'Address must be a valid ethereum address'
+    } else if (address.error === ADDRESS_NOT_AVAILABLE_ERROR) {
       errorMessage = 'Address is taken'
     }
 
@@ -245,7 +252,7 @@ class AddEmployee extends React.PureComponent {
             />
           </Field>
 
-          <Button type='submit' mode='strong' disabled={!isValid}>
+          <Button type='submit' mode='strong'>
             Add new employee
           </Button>
           <Messages>
@@ -269,7 +276,7 @@ AddEmployee.propsType = {
 
 // TODO: replace IconBlank with IconCross - sgobotta
 const ValidationError = ({ message }) => (
-  <ValidationErrorBlock>
+  <ValidationErrorBlock name='validation-error-block'>
     <StyledIconBlank />
     <StyledText size="small">
       {message}
