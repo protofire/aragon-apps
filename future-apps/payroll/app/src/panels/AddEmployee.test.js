@@ -187,7 +187,7 @@ function renderAddEmployeePanel (props) {
 
   render(
     <AragonContext.Provider value={mockApp}>
-      <AddEmployeePanel opened {...props} isAddressAvailable={(address) => Factory.createInitialAccounts().every(e => e.address !== address) } />
+      <AddEmployeePanel opened {...props} isAddressAvailable={(address) => Factory.createInitialAccounts().every(e => e.address !== address)} />
     </AragonContext.Provider>
   )
 

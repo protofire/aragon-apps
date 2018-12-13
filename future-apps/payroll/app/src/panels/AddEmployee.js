@@ -76,7 +76,6 @@ class AddEmployee extends React.PureComponent {
   }
 
   handleAddressChange = (event) => {
-    const { address } = this.state
     const error = NO_ERROR
     const value = event.target.value
     this.setState({
@@ -278,7 +277,7 @@ AddEmployee.propsType = {
 const ValidationError = ({ message }) => (
   <ValidationErrorBlock name='validation-error-block'>
     <StyledIconBlank />
-    <StyledText size="small">
+    <StyledText size='small'>
       {message}
     </StyledText>
   </ValidationErrorBlock>
