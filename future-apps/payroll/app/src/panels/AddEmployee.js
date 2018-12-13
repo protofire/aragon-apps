@@ -2,7 +2,7 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Button, Field, SidePanel, IconBlank } from '@aragon/ui'
+import { Button, Field, SidePanel, IconBlank, Text } from '@aragon/ui'
 import { startOfDay } from 'date-fns'
 
 import Input from '../components/Input'
@@ -195,7 +195,7 @@ class AddEmployee extends React.PureComponent {
               innerRef={this.setSalaryInputRef}
               value={salary}
               onChange={this.handleSalaryChange}
-              icon={<IconBlank />}
+              icon={<DollarIcon />}
             />
           </Field>
 
@@ -237,6 +237,16 @@ const Form = styled.form`
 
   > :last-child {
     margin-top: 20px;
+  }
+`
+
+const DollarIcon = styled(Text)`
+  &::before {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    text-align: center;
+    content: '$'
   }
 `
 
