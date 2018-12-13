@@ -204,8 +204,6 @@ class AddEmployee extends React.PureComponent {
               key={startDate}
               value={startDate}
               onChange={this.handleStartDateChange}
-              icon={<IconBlank />}
-              iconposition='right'
             />
           </Field>
 
