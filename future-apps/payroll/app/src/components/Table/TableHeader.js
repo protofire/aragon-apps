@@ -6,9 +6,10 @@ const TableHeader = styled(BaseTableHeader)`
   position: relative;
   padding-right: 21px;
 
-  ${({ sortable, sortDirection }) => sortable && css`
+  ${({ sortable, sortDirection, textAlign }) => sortable && css`
     cursor: pointer;
     user-select: none;
+    text-align: ${textAlign || 'left'};
 
     :before {
       position: absolute;
@@ -19,6 +20,7 @@ const TableHeader = styled(BaseTableHeader)`
       border-right: 4px solid transparent;
       border-bottom: 4px solid ${theme.textSecondary};
       opacity: ${sortDirection < 0 ? 1 : 0.2}
+
     }
 
     :after {
