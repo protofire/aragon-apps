@@ -6,9 +6,9 @@ import { getAccountAddress } from './account'
 import { getEmployeeById, getEmployeeByAddress, getSalaryAllocation } from './employees'
 import { getDenominationToken, getToken } from './tokens'
 import { date, payment } from './marshalling'
-// import financeEvents from './abi/finance-events'
+// import financeEvents from '../abi/finance-events'
 
-export default function configureStore (financeAddress) {
+export default function configureStore (financeAddress, vaultAddress) {
   // const financeApp = app.external(financeAddress, financeEvents)
 
   return app.store(async (state, { event, ...data }) => {
@@ -25,7 +25,7 @@ export default function configureStore (financeAddress) {
 
     return state
   }, [
-    of({ event: Event.Init }),
+    of({ event: Event.Init, vaultAddress }),
 
     // Handle account change
     app.accounts().map(([accountAddress]) => {
@@ -55,23 +55,29 @@ const eventMapping = ({
   [Event.TerminateEmployee]: onTerminateEmployee
 })
 
-async function onInit (state) {
-  const [accountAddress, denominationToken] = await Promise.all([
+async function onInit (state, { vaultAddress }) {
+  const [accountAddress, denominationToken, network] = await Promise.all([
     getAccountAddress(),
-    getDenominationToken()
+    getDenominationToken(),
+    app.network().take(1).toPromise()
   ])
 
-  return { ...state, accountAddress, denominationToken }
+  return { ...state, vaultAddress, accountAddress, denominationToken, network }
 }
 
 async function onChangeAccount (state, event) {
   const { accountAddress } = event
-  const { tokens = [] } = state
+  const { tokens = [], employees = [] } = state
+  let salaryAllocation = []
 
-  const salaryAllocation = await getSalaryAllocation(
-    accountAddress,
-    tokens
-  )
+  const employee = employees.find(employee => employee.accountAddress === accountAddress)
+
+  if (employee) {
+    salaryAllocation = await getSalaryAllocation(
+      employee.id,
+      tokens
+    )
+  }
 
   return { ...state, accountAddress, salaryAllocation }
 }
@@ -92,7 +98,7 @@ async function onAddAllowedToken (state, event) {
 }
 
 async function onAddNewEmployee (state, event) {
-  const { returnValues: { employeeId, startDate } } = event
+  const { returnValues: { employeeId, name, role, startDate } } = event
   const { employees = [] } = state
 
   if (!employees.find(e => e.id === employeeId)) {
@@ -101,6 +107,8 @@ async function onAddNewEmployee (state, event) {
     if (newEmployee) {
       employees.push({
         ...newEmployee,
+        name: name,
+        role: role,
         startDate: date(startDate)
       })
     }
@@ -111,24 +119,34 @@ async function onAddNewEmployee (state, event) {
 
 async function onChangeEmployeeAddress (state, event) {
   const { returnValues: { newAddress: accountAddress } } = event
-  const { tokens = [] } = state
+  const { tokens = [], employees = [] } = state
+  let salaryAllocation = []
 
-  const salaryAllocation = await getSalaryAllocation(
-    accountAddress,
-    tokens
-  )
+  const employee = employees.find(employee => employee.accountAddress === accountAddress)
+
+  if (employee) {
+    salaryAllocation = await getSalaryAllocation(
+      employee.id,
+      tokens
+    )
+  }
 
   return { ...state, accountAddress, salaryAllocation }
 }
 
 async function onChangeSalaryAllocation (state, event) {
   const { returnValues: { employee: accountAddress } } = event
-  const { tokens = [] } = state
+  const { tokens = [], employees = [] } = state
+  let salaryAllocation = []
 
-  const salaryAllocation = await getSalaryAllocation(
-    accountAddress,
-    tokens
-  )
+  const employee = employees.find(employee => employee.accountAddress === accountAddress)
+
+  if (employee) {
+    salaryAllocation = await getSalaryAllocation(
+      employee.id,
+      tokens
+    )
+  }
 
   return { ...state, salaryAllocation }
 }
@@ -206,6 +224,8 @@ function updateEmployeeBy (employees, employeeData, by) {
       if (by(employee)) {
         nextEmployee = {
           ...employeeData,
+          name: employee.name,
+          role: employee.role,
           startDate: employee.startDate
         }
       }

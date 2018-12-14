@@ -2,7 +2,7 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Button, Field, SidePanel, IconBlank } from '@aragon/ui'
+import { Button, Field, IconBlank, SidePanel, Text } from '@aragon/ui'
 import { startOfDay } from 'date-fns'
 
 import Input from '../components/Input'
@@ -11,109 +11,140 @@ import validator from '../data/validation'
 import { toDecimals } from '../utils/math-utils'
 import { SECONDS_IN_A_YEAR } from '../utils/formatting'
 
-const Form = styled.form`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 20px;
-
-  > :first-child, > :nth-last-child(-n+2) {
-    grid-column: span 2;
-  }
-
-  > :last-child {
-    margin-top: 20px;
-  }
-`
+const NO_ERROR = Symbol('NO_ERROR')
+const ADDRESS_NOT_AVAILABLE_ERROR = Symbol('ADDRESS_NOT_AVAILABLE_ERROR')
+const ADDRESS_INVALID_FORMAT = Symbol('ADDRESS_INVALID_FORMAT')
 
 class AddEmployee extends React.PureComponent {
   static initialState = {
-    entity: null,
-    salary: null,
+    address: {
+      value: '',
+      error: NO_ERROR
+    },
+    name: '',
+    role: '',
+    salary: '',
     startDate: startOfDay(new Date())
   }
 
   static validate = validator.compile({
     type: 'object',
     properties: {
+      name: {
+        type: 'string'
+      },
+      role: {
+        type: 'string'
+      },
       salary: {
         type: 'number',
         exclusiveMinimum: 0
       },
       startDate: {
-        format: 'date',
-        default: startOfDay(new Date())
-      },
-      entity: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string'
-          },
-          role: {
-            type: 'string'
-          },
-          accountAddress: {
-            type: 'string',
-            format: 'address'
-          }
-        },
-        required: ['accountAddress']
+        format: 'date'
       }
     },
-    required: ['salary', 'startDate', 'entity']
+    required: ['salary', 'startDate', 'name', 'role']
+  })
+
+  static validateAddress = validator.compile({
+    type: 'object',
+    properties: {
+      value: {
+        format: 'address'
+      }
+    },
+    required: ['value']
   })
 
   state = AddEmployee.initialState
 
-  componentDidUpdate (prevProps, prevState) {
-    if (this.state !== prevState) {
-      const state = { ...this.state }
-
-      this.setState({
-        ...state,
-        isValid: AddEmployee.validate(state)
-      })
-    }
-  }
-
   focusFirstEmptyField = () => {
-    const { entity, salary } = this.state
+    const { address, name, role, salary } = this.state
 
-    if (!entity) {
-      this.entitySearch.input.focus()
+    if (!address.value) {
+      this.address.input.focus()
+    } else if (!name) {
+      this.nameInput.input.focus()
+    } else if (!role) {
+      this.roleInput.input.focus()
     } else if (!salary) {
       this.salaryInput.input.focus()
     }
   }
 
-  handleEntityChange = (accountAddress, entity) => {
-    this.setState({ entity }, () => {
-      this.focusFirstEmptyField()
+  handleAddressChange = (event) => {
+    const error = NO_ERROR
+    const value = event.target.value
+    this.setState({
+      address: {
+        value,
+        error
+      }
     })
+  }
+
+  handleNameChange = (event) => {
+    this.setState({ name: event.target.value })
+  }
+
+  handleRoleChange = (event) => {
+    this.setState({ role: event.target.value })
+  }
+
+  handleSalaryChange = (event) => {
+    this.setState({ salary: event.target.value })
+  }
+
+  handleStartDateChange = (date) => {
+    this.setState({ startDate: date })
   }
 
   handleFormSubmit = (event) => {
     event.preventDefault()
+    const { denominationToken, app, isAddressAvailable } = this.props
+    const { address, name, salary, role, startDate } = this.state
+    const _address = address.value
+    const _isValidAddress = AddEmployee.validateAddress(address)
+    const _isAddressAvailable = isAddressAvailable(_address)
 
-    const { denominationToken, app } = this.props
-    const { salary } = this.state
+    if (!_isValidAddress) {
+      this.setState(({ address }) => ({
+        address: {
+          ...address,
+          error: ADDRESS_INVALID_FORMAT
+        }
+      }))
+      return
+    }
 
-    if (app) {
-      const accountAddress = this.state.entity.accountAddress
+    if (!_isAddressAvailable) {
+      this.setState(({ address }) => ({
+        address: {
+          ...address,
+          error: ADDRESS_NOT_AVAILABLE_ERROR
+        }
+      }))
+      return
+    }
+
+    const isValidForm = AddEmployee.validate(this.state)
+
+    if (app && isValidForm) {
       const initialDenominationSalary = salary / SECONDS_IN_A_YEAR
 
       const adjustedAmount = toDecimals(initialDenominationSalary.toString(), denominationToken.decimals, {
         truncate: true
       })
 
-      const name = this.state.entity.domain
-      const startDate = Math.floor(this.state.startDate.getTime() / 1000)
+      const _startDate = Math.floor(startDate.getTime() / 1000)
 
-      app.addEmployeeWithNameAndStartDate(
-        accountAddress,
+      app.addEmployee(
+        _address,
         adjustedAmount,
         name,
-        startDate
+        role,
+        _startDate
       ).subscribe(employee => {
         if (employee) {
           // Reset form data
@@ -126,22 +157,22 @@ class AddEmployee extends React.PureComponent {
     }
   }
 
-  handleSalaryChange = (event) => {
-    this.setState({ salary: event.target.value })
-  }
-
-  handleStartDateChange = (date) => {
-    this.setState({ startDate: date })
-  }
-
   handlePanelToggle = (opened) => {
     if (opened) { // When side panel is shown
       this.focusFirstEmptyField()
     }
   }
 
-  setEntitySearchRef = (el) => {
-    this.entitySearch = el
+  setAddressRef = (el) => {
+    this.address = el
+  }
+
+  setNameInputRef = (el) => {
+    this.nameInput = el
+  }
+
+  setRoleInputRef = (el) => {
+    this.roleInput = el
   }
 
   setSalaryInputRef = (el) => {
@@ -150,7 +181,14 @@ class AddEmployee extends React.PureComponent {
 
   render () {
     const { opened, onClose } = this.props
-    const { entity, salary, startDate, isValid } = this.state
+    const { address, name, role, salary, startDate } = this.state
+
+    let errorMessage
+    if (address.error === ADDRESS_INVALID_FORMAT) {
+      errorMessage = 'Address must be a valid ethereum address'
+    } else if (address.error === ADDRESS_NOT_AVAILABLE_ERROR) {
+      errorMessage = 'Address is taken'
+    }
 
     const panel = (
       <SidePanel
@@ -163,25 +201,41 @@ class AddEmployee extends React.PureComponent {
           onSubmit={this.handleFormSubmit}
           data-testid='add-employee-form'
         >
-          <Field label='Entity'>
-            <Input.Entity
-              ref={this.setEntitySearchRef}
-              key={entity && entity.domain}
-              value={entity && entity.domain}
-              onChange={this.handleEntityChange}
-              inputProps={{
-                iconposition: 'right',
-                icon: <IconBlank />
-              }}
+
+          <Field label='Address'>
+            <Input.Text
+              innerRef={this.setAddressRef}
+              value={address.value}
+              onChange={this.handleAddressChange}
+              required
+            />
+          </Field>
+
+          <Field label='Name'>
+            <Input.Text
+              innerRef={this.setNameInputRef}
+              value={name}
+              onChange={this.handleNameChange}
+              required
+            />
+          </Field>
+
+          <Field label='Role'>
+            <Input.Text
+              innerRef={this.setRoleInputRef}
+              value={role}
+              onChange={this.handleRoleChange}
+              required
             />
           </Field>
 
           <Field label='Salary'>
             <Input.Currency
               innerRef={this.setSalaryInputRef}
-              value={salary || ''}
+              value={salary}
               onChange={this.handleSalaryChange}
               icon={<IconBlank />}
+              required
             />
           </Field>
 
@@ -192,36 +246,16 @@ class AddEmployee extends React.PureComponent {
               onChange={this.handleStartDateChange}
               icon={<IconBlank />}
               iconposition='right'
+              required
             />
           </Field>
 
-          <Field label='Name'>
-            <Input.Static>
-              <span data-testid='entity-name'>
-                {entity ? entity.name : ' '}
-              </span>
-            </Input.Static>
-          </Field>
-
-          <Field label='Role'>
-            <Input.Static>
-              <span data-testid='entity-role'>
-                {entity ? entity.role : ' '}
-              </span>
-            </Input.Static>
-          </Field>
-
-          <Field label='Account Address'>
-            <Input.Static>
-              <span data-testid='entity-account-address'>
-                {entity ? entity.accountAddress : ' '}
-              </span>
-            </Input.Static>
-          </Field>
-
-          <Button type='submit' mode='strong' disabled={!isValid}>
+          <Button type='submit' mode='strong'>
             Add new employee
           </Button>
+          <Messages>
+            {errorMessage && <ValidationError message={errorMessage} />}
+          </Messages>
         </Form>
       </SidePanel>
     )
@@ -238,9 +272,52 @@ AddEmployee.propsType = {
   opened: PropTypes.bool
 }
 
-function mapStateToProps ({ denominationToken = {} }) {
+// TODO: replace IconBlank with IconCross - sgobotta
+const ValidationError = ({ message }) => (
+  <ValidationErrorBlock name='validation-error-block'>
+    <StyledIconBlank />
+    <StyledText size='small'>
+      {message}
+    </StyledText>
+  </ValidationErrorBlock>
+)
+
+const StyledIconBlank = styled(IconBlank)`
+  color: red;
+`
+
+const StyledText = styled(Text)`
+  position: relative;
+  bottom: 6px;
+  margin-left: 10px;
+`
+
+const Messages = styled.div`
+  margin-top: 15px;
+`
+
+const ValidationErrorBlock = styled.div`
+  margin-top: 15px;
+`
+
+const Form = styled.form`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+
+  > :first-child, > :nth-last-child(-n+2) {
+    grid-column: span 2;
+  }
+
+  > :last-child {
+    margin-top: 20px;
+  }
+`
+
+function mapStateToProps ({ denominationToken = {}, employees = [] }) {
   return {
-    denominationToken
+    denominationToken,
+    isAddressAvailable: (address) => employees.every(employee => employee.accountAddress !== address)
   }
 }
 

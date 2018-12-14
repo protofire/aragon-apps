@@ -4,8 +4,7 @@ import React from 'react'
 import {
   cleanup,
   fireEvent,
-  render,
-  waitForElement
+  render
 } from 'react-testing-library'
 import { bindElementToQueries } from 'dom-testing-library'
 import 'jest-dom/extend-expect'
@@ -14,7 +13,10 @@ import { format as formatDate } from 'date-fns'
 import AddEmployeePanel from './AddEmployee'
 import AragonContext from '../context/AragonContext'
 
+import Factory from '../../test/factory'
+
 const bodyUtils = bindElementToQueries(document.body)
+const modalRoot = bodyUtils.getByTestId('modal-root')
 
 afterEach(cleanup)
 
@@ -41,43 +43,33 @@ describe('Add new employee panel', () => {
   })
 
   describe('Fields', () => {
-    describe('Entity field', () => {
-      it('renders a search input', () => {
+    describe('Address field', () => {
+      it('renders an alphanumeric input', () => {
         const { fields } = renderAddEmployeePanel()
 
-        expect(fields.entity).not.toBeNull()
-        expect(fields.entity).toBeVisible()
-        expect(fields.entity.type).toBe('search')
+        expect(fields.address).not.toBeNull()
+        expect(fields.address).toBeVisible()
+        expect(fields.address.type).toBe('text')
       })
+    })
 
-      it('allows to search for an entity', async () => {
-        const { form, fields } = renderAddEmployeePanel()
-        const searchText = 'protofire'
+    describe('Name field', () => {
+      it('renders an alphanumeric input', () => {
+        const { fields } = renderAddEmployeePanel()
 
-        expect(fields.entity.value).toBe('')
+        expect(fields.name).not.toBeNull()
+        expect(fields.name).toBeVisible()
+        expect(fields.name.type).toBe('text')
+      })
+    })
 
-        // Enter search text into the field
-        fireEvent.change(fields.entity, { target: { value: searchText } })
+    describe('Role field', () => {
+      it('renders an alphanumeric input', () => {
+        const { fields } = renderAddEmployeePanel()
 
-        // Wait until the suggestions appear
-        const suggestion = await waitForElement(() =>
-          form.querySelector('ul > li:first-child')
-        )
-
-        expect(suggestion).not.toBeNull()
-        expect(suggestion).toHaveTextContent(
-          'ProtoFire (protofire.aragonid.eth)'
-        )
-
-        // Select first suggestion
-        fireEvent.click(suggestion)
-
-        // Verify that the data for the selected entity is shown
-        expect(fields.name).toHaveTextContent('ProtoFire')
-        expect(fields.role).toHaveTextContent('Organization')
-        expect(fields.accountAddress).toHaveTextContent(
-          'xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-        )
+        expect(fields.role).not.toBeNull()
+        expect(fields.role).toBeVisible()
+        expect(fields.role.type).toBe('text')
       })
     })
 
@@ -108,69 +100,68 @@ describe('Add new employee panel', () => {
     })
   })
 
-  describe('Validations', () => {
-    it('entity field is required', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+  describe('Errors', () => {
+    it('address is not valid message should be shown on invalid addresses input', () => {
+      const { fields, buttons } = renderAddEmployeePanel()
+      const { address, name, role, salary } = fields
 
-      expect(buttons.submit).toHaveAttribute('disabled')
+      const account = Factory.createAccountArgs()
+
+      // Fill in the Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
+      expect(name.value).toBe(account.name)
+
+      // Fill in the Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
+      expect(role.value).toBe(account.role)
 
       // Fill in Salary field with a valid value
-      fireEvent.change(fields.salary, {
-        target: { value: '40000' }
-      })
+      const salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
+      expect(salary.value).toBe(salaryAmount)
 
-      // Empty value for entity field
-      expect(fields.entity.value).toBe('')
-      expect(buttons.submit).toHaveAttribute('disabled')
+      // Fill in Address field with a valid value
+      fireEvent.change(address, { target: { value: 'an invalid address' } })
+      expect(address.value).toBe('an invalid address')
 
-      // Valid value for entity field
-      const suggestion = await searchEntity('protofire.aragonid.eth')
-      fireEvent.click(suggestion)
+      fireEvent.click(buttons.submit)
 
-      expect(buttons.submit).not.toHaveAttribute('disabled')
+      const errorBlock = modalRoot.querySelector('div[name="validation-error-block"] span')
+
+      // Asserts the error message is shown
+      expect(errorBlock).toHaveTextContent('Address must be a valid ethereum address')
     })
 
-    it('allows only positive salaries', async () => {
-      const { fields, buttons, searchEntity } = renderAddEmployeePanel()
+    it('address is taken message should be shown on an already used address input', () => {
+      const { fields, buttons } = renderAddEmployeePanel()
+      const { address, name, role, salary } = fields
 
-      expect(buttons.submit).toHaveAttribute('disabled')
+      const account = Factory.createAccountArgs()
 
-      // Fill in Entity field with a valid value
-      const suggestion = await searchEntity('protofire.aragonid.eth')
-      fireEvent.click(suggestion)
+      // Fill in the Name field with a valid value
+      fireEvent.change(name, { target: { value: account.name } })
+      expect(name.value).toBe(account.name)
 
-      expect(buttons.submit).toHaveAttribute('disabled')
+      // Fill in the Role field with a valid value
+      fireEvent.change(role, { target: { value: account.role } })
+      expect(role.value).toBe(account.role)
 
-      // Try with empty salary
-      fireEvent.change(fields.salary, {
-        target: { value: '' }
-      })
+      // Fill in Salary field with a valid value
+      const salaryAmount = '40000'
+      fireEvent.change(salary, { target: { value: salaryAmount } })
+      expect(salary.value).toBe(salaryAmount)
 
-      expect(fields.accountAddress).toHaveTextContent(
-        'xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-      )
-      expect(buttons.submit).toHaveAttribute('disabled')
+      // Fill in Address field with a valid value
+      fireEvent.change(address, { target: { value: account.address } })
+      expect(address.value).toBe(account.address)
 
-      // Try with negative salary
-      fireEvent.change(fields.salary, {
-        target: { value: '-40000' }
-      })
+      // Submits the form
+      fireEvent.click(buttons.submit)
 
-      expect(buttons.submit).toHaveAttribute('disabled')
+      const errorBlock = modalRoot.querySelector('div[name="validation-error-block"] span')
 
-      // Try with salary equal to 0
-      fireEvent.change(fields.salary, {
-        target: { value: '0' }
-      })
-
-      expect(buttons.submit).toHaveAttribute('disabled')
-
-      // Try with positive salary
-      fireEvent.change(fields.salary, {
-        target: { value: '40000' }
-      })
-
-      expect(buttons.submit).not.toHaveAttribute('disabled')
+      // Asserts the error message is shown
+      expect(errorBlock).toHaveTextContent('Address is taken')
     })
   })
 })
@@ -196,23 +187,19 @@ function renderAddEmployeePanel (props) {
 
   render(
     <AragonContext.Provider value={mockApp}>
-      <AddEmployeePanel opened {...props} />
+      <AddEmployeePanel opened {...props} isAddressAvailable={(address) => Factory.createInitialAccounts().every(e => e.address !== address)} />
     </AragonContext.Provider>
   )
 
-  const modalRoot = bodyUtils.getByTestId('modal-root')
   const panel = bindElementToQueries(modalRoot)
   const form = panel.getByTestId('add-employee-form')
 
   const fields = {
-    entity: panel.queryByLabelText('Entity'),
-    salary: panel.queryByLabelText('Salary'),
-    startDate: panel.queryByLabelText('Start Date'),
-
-    // Static
-    name: panel.queryByTestId('entity-name'),
-    role: panel.queryByTestId('entity-role'),
-    accountAddress: panel.queryByTestId('entity-account-address')
+    address: panel.queryByLabelText('Address*'),
+    name: panel.queryByLabelText('Name*'),
+    role: panel.queryByLabelText('Role*'),
+    salary: panel.queryByLabelText('Salary*'),
+    startDate: panel.queryByLabelText('Start Date*')
   }
 
   const buttons = {
@@ -220,13 +207,5 @@ function renderAddEmployeePanel (props) {
     submit: modalRoot.querySelector('button[type="submit"]')
   }
 
-  const searchEntity = searchText => {
-    fireEvent.change(fields.entity, {
-      target: { value: searchText }
-    })
-
-    return waitForElement(() => form.querySelector('ul > li:first-child'))
-  }
-
-  return { form, fields, buttons, searchEntity }
+  return { form, fields, buttons }
 }
