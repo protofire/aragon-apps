@@ -31,12 +31,10 @@ class AddEmployee extends React.PureComponent {
     type: 'object',
     properties: {
       name: {
-        type: 'string',
-        minLength: 3
+        type: 'string'
       },
       role: {
-        type: 'string',
-        minLength: 3
+        type: 'string'
       },
       salary: {
         type: 'number',
