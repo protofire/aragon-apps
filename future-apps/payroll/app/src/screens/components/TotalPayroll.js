@@ -1,7 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
 import TotalPayrollTable from './TotalPayrollTable'
-import { formatCurrency, SECONDS_IN_A_YEAR } from '~/utils/formatting'
 import { totalPaidThisYear, summation, MONTHS_IN_A_YEAR } from '~/utils/calculations'
 
 import { connect } from '~/context/AragonContext'
@@ -44,8 +43,6 @@ class TotalPayroll extends React.PureComponent {
 
   render () {
     const { data, denominationToken } = this.state
-    const formatSalary = (amount) => formatCurrency(amount, denominationToken.symbol, 10, denominationToken.decimals, SECONDS_IN_A_YEAR)
-    const customFormatCurrency = (amount) => formatCurrency(amount, denominationToken.symbol, 10, 0)
     return (
       <Container>
         <Header>
@@ -53,8 +50,8 @@ class TotalPayroll extends React.PureComponent {
         </Header>
         <TotalPayrollTable
           data={data}
-          formatSalary={formatSalary}
-          formatCurrency={customFormatCurrency} />
+          denominationToken={denominationToken}
+        />
       </Container>
     )
   }
