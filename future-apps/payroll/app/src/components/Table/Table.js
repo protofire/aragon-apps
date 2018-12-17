@@ -179,6 +179,7 @@ class Table extends React.Component {
               sortDirection={isSortColumn ? sortDirection : 0}
               onClick={isSortable ? this.handleHeaderClick : () => {}}
               data-column-index={index}
+              textAlign={column.cellProps && column.cellProps.align}
             />
           )
         })}
