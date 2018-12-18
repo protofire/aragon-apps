@@ -2,7 +2,7 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Button, Field, IconBlank, SidePanel, IconBlank, Text } from '@aragon/ui'
+import { Button, Field, IconBlank, SidePanel, Text } from '@aragon/ui'
 import { startOfDay } from 'date-fns'
 
 import Input from '../components/Input'
