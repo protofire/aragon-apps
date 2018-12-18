@@ -234,7 +234,7 @@ class AddEmployee extends React.PureComponent {
               innerRef={this.setSalaryInputRef}
               value={salary}
               onChange={this.handleSalaryChange}
-              icon={<IconBlank />}
+              icon={<DollarIcon />}
               required
             />
           </Field>
@@ -244,8 +244,6 @@ class AddEmployee extends React.PureComponent {
               key={startDate}
               value={startDate}
               onChange={this.handleStartDateChange}
-              icon={<IconBlank />}
-              iconposition='right'
               required
             />
           </Field>
@@ -311,6 +309,16 @@ const Form = styled.form`
 
   > :last-child {
     margin-top: 20px;
+  }
+`
+
+const DollarIcon = styled(Text)`
+  &::before {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    text-align: center;
+    content: '$'
   }
 `
 

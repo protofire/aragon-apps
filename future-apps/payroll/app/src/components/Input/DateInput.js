@@ -3,6 +3,9 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { isDate, format as formatDate } from 'date-fns'
 
+import { IconCalendar } from '../Icons'
+import { theme } from '@aragon/ui'
+
 import BaseInput from './BaseInput'
 import DatePicker from './DatePicker'
 
@@ -56,6 +59,10 @@ class DateInput extends React.PureComponent {
   }
 
   render () {
+    const icon = this.state.showPicker
+      ? <IconCalendarSelected />
+      : <IconCalendar />
+
     return (
       <Container
         innerRef={el => this.rootRef = el}
@@ -65,6 +72,8 @@ class DateInput extends React.PureComponent {
           {...this.props}
           value={this.formattedValue}
           readOnly={true}
+          icon={icon}
+          iconposition='right'
         />
         {this.state.showPicker && (
           <DatePicker
@@ -77,6 +86,10 @@ class DateInput extends React.PureComponent {
     )
   }
 }
+
+const IconCalendarSelected = styled(IconCalendar)`
+  color: ${theme.accent}
+`
 
 DateInput.propTypes = {
   format: PropTypes.string,

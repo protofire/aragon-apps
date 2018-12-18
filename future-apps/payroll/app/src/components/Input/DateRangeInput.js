@@ -7,6 +7,9 @@ import {
   startOfDay, endOfDay
 } from 'date-fns'
 
+import { IconCalendar } from '../Icons'
+import { theme } from '@aragon/ui'
+
 import BaseInput from './BaseInput'
 import DatePicker from './DatePicker'
 
@@ -79,7 +82,11 @@ class DateRangeInput extends React.PureComponent {
 
   render () {
     const { startDate, endDate } = this.state
-    const { icon, iconposition } = this.props
+
+    const icon = this.state.showPicker
+      ? <IconCalendarSelected />
+      : <IconCalendar />
+
     return (
       <StyledContainer
         innerRef={el => this.rootRef = el}
@@ -89,7 +96,7 @@ class DateRangeInput extends React.PureComponent {
           value={`${this.formattedStartDate} - ${this.formattedEndDate}`}
           readOnly={true}
           icon={icon}
-          iconposition={iconposition}
+          iconposition='right'
           height={39}
         />
         {this.state.showPicker && (
@@ -116,6 +123,10 @@ class DateRangeInput extends React.PureComponent {
     )
   }
 }
+
+const IconCalendarSelected = styled(IconCalendar)`
+  color: ${theme.accent}
+`
 
 DateRangeInput.propTypes = {
   endDate: PropTypes.instanceOf(Date),
